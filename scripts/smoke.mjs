@@ -41,12 +41,13 @@ if (after <= before + 2000) {
   throw new Error(`pointer did not lift the field: ${before} -> ${after}`);
 }
 
+const beforeRipples = api.engine_ripples(ptr);
 api.engine_pointer_down(ptr, 4, 4, 3000);
 if (api.engine_pointer_up(ptr, 4, 4, 3200) !== 0) {
   throw new Error("a field press was treated as the wordmark");
 }
-if (api.engine_ripples(ptr) !== 1) {
-  throw new Error(`expected one sprite, saw ${api.engine_ripples(ptr)}`);
+if (api.engine_ripples(ptr) !== beforeRipples + 1) {
+  throw new Error(`a field release should add one sprite, saw ${beforeRipples} then ${api.engine_ripples(ptr)}`);
 }
 if (api.engine_appear(ptr) !== 0) {
   throw new Error(`first appear should be print, saw ${api.engine_appear(ptr)}`);

@@ -11,15 +11,9 @@
 //! The shape of a letter fill is `appears.rs`. How a released icon moves is
 //! `sprites.rs`.
 //!
-//! Config:
-//! - `REVEAL_MS` is the length of every appear, in milliseconds. Change it
-//!   here, not per appear. 1100 is a little over a second.
-//! - The two speeds inside `wander` (`0.57` and `0.31`) are radians per
-//!   second along x and y. Raise them and the drift moves faster.
-//!   `0.33` and `0.26` are how far it swings, as a fraction of the canvas.
+//! The numbers are in `config.rs`: `REVEAL_MS`, and the `WANDER_*` speeds.
 
-/// Every appear uses this long, ease-out cubic. Change it here, not per appear.
-pub const REVEAL_MS: f64 = 1100.0;
+pub use crate::config::REVEAL_MS;
 
 pub fn reveal(now: f64, start: f64, reduced: bool) -> f32 {
     if reduced {
@@ -31,9 +25,12 @@ pub fn reveal(now: f64, start: f64, reduced: bool) -> f32 {
 
 pub fn wander(now_ms: f64, w: f32, h: f32) -> (f32, f32) {
     let t = (now_ms / 1000.0) as f32;
-    // 0.57 and 0.31 are the drift speeds. 0.33 and 0.26 are the swing.
-    let x = w * (0.5 + 0.33 * (t * 0.57).sin());
-    let y = h * (0.48 + 0.26 * (t * 0.31 + 1.15).sin());
+    let x = w * (crate::config::WANDER_CENTER_X
+        + crate::config::WANDER_SWING_X * (t * crate::config::WANDER_SPEED_X).sin());
+    let y = h
+        * (crate::config::WANDER_CENTER_Y
+            + crate::config::WANDER_SWING_Y
+                * (t * crate::config::WANDER_SPEED_Y + crate::config::WANDER_PHASE_Y).sin());
     (x, y)
 }
 

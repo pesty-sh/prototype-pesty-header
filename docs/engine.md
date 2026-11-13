@@ -10,26 +10,27 @@ Read `README.md` and get the page running before this file. This is the map for 
 2. Ease the pointer toward the latest mouse sample. Boxes over the nav and the sentence force that glow down so the type stays readable.
 3. Advance the appear clock. The shape of the fill, left to right or top to bottom or the others, is `appears.rs`. The length of the clock is `REVEAL_MS` in `motion.rs`.
 4. Collect glows: the pointer, and a slow drift when the mouse is away and motion is allowed.
-5. Collect icons. The one under a held pointer, then any that were released earlier and are still alive. A release on the word is not in this list. It restarts the appear instead.
-6. For each square, decide. If it is a letter cell and the appear says it is visible, paint the overhead colour. Otherwise it is field: noise has to clear a threshold, helped by the glows and the icons.
+5. Collect icons. The one under a held pointer, then any that were released earlier and are still alive. A slide also contributes the smaller icons it has spat out. A release on the word is not in this list. It restarts the appear instead.
+6. For each square, decide. If it is a letter cell and the appear says it is visible, paint the overhead colour. Otherwise it is field: noise has to clear a threshold, helped by the glows and the icons. Inside a wide radius the pointer hoovers those speckles onto itself and the cells they left stay quiet. The noise points stay where they are. When the pointer moves off a point, that speckle is drawn on it again.
 
 Nothing else draws pixels. `lib.rs` calls `paint` once per frame. `src/main.ts` copies the buffer onto the canvas after that call.
 
-Icons do not spawn on a timer. Search for `spawn_sprite` in `lib.rs`. It is called from one place: a pointer release that landed on the field. The roll of which icon and which play happens at the press, in `sprites.rs`, so the shape under the finger is the shape that runs.
+A click icon does not spawn on a timer. Search for `spawn_sprite` in `lib.rs`. It runs from a pointer release on the field. The roll of which icon and which play happens at the press, in `sprites.rs`, so the shape under your finger is the shape that runs. The wander stays a ball of pixels. `tick_drift` fires one trail of pixels on a random wait of at least five seconds. The trail lands at a random point inside the canvas and bursts into a random icon. `MAX_SPRITES` in `engine/src/config.rs` caps both.
 
 ## Edit order
 
 The reading order starts at `paint.rs`, then follows the calls. This list is different. It is the order to open files when you are changing a value, because later files use the earlier ones:
 
-1. `engine/src/palette.rs` — the six colours
-2. `engine/src/logo.rs` — the wordmark bitmap and the light bands
-3. `engine/src/appears.rs` — what a click on the word does, in order
-4. `engine/src/sprites.rs` — icons, and whether a release appears, slides, or expands
-5. `engine/src/pointer.rs` — the mouse
-6. `engine/src/motion.rs` — the shared appear clock, and the wander
-7. `engine/src/field.rs` — noise, dither, vignette
-8. `engine/src/paint.rs` — one frame, numbered in the same order it draws
-9. `engine/src/lib.rs` — the `Engine` that runs those, then the wasm exports
+1. `engine/src/config.rs` — every knob, including the wander and its trail
+2. `engine/src/palette.rs` — the six colours
+3. `engine/src/logo.rs` — the wordmark bitmap and the light bands
+4. `engine/src/appears.rs` — what a click on the word does, in order
+5. `engine/src/sprites.rs` — icons, and whether a release appears, slides, or expands
+6. `engine/src/pointer.rs` — the mouse
+7. `engine/src/motion.rs` — the shared appear clock, and the wander
+8. `engine/src/field.rs` — noise, dither, vignette
+9. `engine/src/paint.rs` — one frame, numbered in the same order it draws
+10. `engine/src/lib.rs` — the `Engine` that runs those, then the wasm exports
 
 `paint.rs` is annotated as the frame sequence: background, pointer, appear clock, glows, sprites, then each cell.
 
@@ -166,7 +167,7 @@ The plays:
 | Play | Motion |
 | --- | --- |
 | appear | Pops in, holds, fades. It does not travel. |
-| slide | Holds its size and drifts on a random heading. |
+| slide | Spins across the header, spits smaller random icons, and bursts on each random landing. Those spat icons fly out and burst too. They belong to that one release. |
 | expand | Grows in place and thins out. |
 
 Add an icon:
@@ -190,13 +191,15 @@ A press on the wordmark is a hit. Releasing it plays the next appear and does no
 
 ## Motion
 
-`reveal` is the clock every appear shares. The wander is a slow drift used when the pointer is away. Reduced motion sets the clock to finished, skips the wander, and drops no icons. The pointer glow still draws.
+`reveal` is the clock every appear shares. The wander is a ball of pixels, not the mouse. It fires one trail of pixels on a random wait of at least five seconds. That trail lands at a random point inside the canvas and bursts into a random icon. Reduced motion sets the clock to finished, skips the wander, and drops no icons. The pointer glow still draws.
+
+Every number for that sprite, and the other picture knobs, is in `engine/src/config.rs`.
 
 ## The page
 
 `src/engine.ts` instantiates `public/engine.wasm` and copies the RGBA buffer into an `ImageData` after each frame. The copy has to happen after the call, because the wasm memory can move.
 
-`src/main.ts` sizes the canvas backing store to the CSS box times the device pixel ratio, capped at 2. The wasm buffer is resized to that same width and height. Setting one without the other clips the wordmark.
+`src/main.ts` sizes the canvas backing store to the CSS box times the device pixel ratio, capped at 2. The wasm buffer is resized to that same width and height. Setting one without the other clips the wordmark. The page and the canvas are filled with the field background before the first wasm frame. `?bg` is that colour while the file is still loading, so a white ground does not start black. Resizing the canvas clears it to black, and the page paints the ground back before the frame is copied.
 
 The frame is skipped while the header is off screen. The meter under the header reads the same engine: pointer, the appear name, live icons, cell size.
 

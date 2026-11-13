@@ -67,6 +67,49 @@ const cellEl = document.querySelector<HTMLElement>("#m-cell");
 const ctx = required(canvas.getContext("2d", { alpha: false }), "canvas context");
 ctx.imageSmoothingEnabled = false;
 
+// The canvas backing store starts opaque black. Paint the field colour
+// into it, and onto the page, before wasm arrives. `?bg` wins over the
+// baked ground so a white field does not flash black while loading.
+let ground = normalizeHex(new URLSearchParams(location.search).get("bg") ?? "") ?? DEFAULT_BG;
+
+function paintField(color: string) {
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function applyGround(color: string) {
+  ground = color;
+  const light = luma(color) > 0.62;
+  const root = document.documentElement;
+  root.style.setProperty("--bg", color);
+  root.style.backgroundColor = color;
+  root.style.colorScheme = light ? "light" : "dark";
+  if (light) {
+    root.style.setProperty("--text", "#1a1c14");
+    root.style.setProperty("--muted", "#4d5244");
+    root.style.setProperty("--line", "#d5d3c6");
+  } else {
+    root.style.removeProperty("--text");
+    root.style.removeProperty("--muted");
+    root.style.removeProperty("--line");
+  }
+  hero.style.backgroundColor = color;
+  hero.classList.toggle("is-light", light);
+  canvas.style.backgroundColor = color;
+  themeColor?.setAttribute("content", color);
+  document
+    .querySelector('meta[name="color-scheme"]')
+    ?.setAttribute("content", light ? "light" : "dark");
+  paintField(color);
+}
+
+applyGround(ground);
+
+// Picture knobs (the self-moving sprite, pops, clock, glow) are in
+// engine/src/config.rs. Rebuild the wasm after editing that file.
+// Bump this when that wasm changes so a reload skips a cached copy.
+const WASM_REV = "0.1.6";
+
 // Device pixel ratio cap. 2 stays sharp without a 3× buffer.
 const DPR_CAP = 2;
 // How often a frame is drawn, in milliseconds.
@@ -128,9 +171,12 @@ function draw(field: Field, now: number) {
   const height = Math.max(1, Math.round(origin.height * scale));
   // 2. The canvas and the wasm buffer have to be the same size.
   if (canvas.width !== width || canvas.height !== height) {
+    // Resizing clears the bitmap to black. Put the ground back before the
+    // frame is copied, so a white field never shows that clear.
     canvas.width = width;
     canvas.height = height;
     ctx.imageSmoothingEnabled = false;
+    paintField(ground);
     field.resize(width, height);
   }
   // 3. Word box, then the quiet boxes over the type.
@@ -171,7 +217,6 @@ function boot(field: Field) {
   if (demo) wireDemo(field);
 
   markSlot.style.aspectRatio = `${field.cols} / ${field.rows}`;
-  hero.classList.add("is-ready", "is-live");
   statusEl.textContent = "live";
 
   window.addEventListener("pointermove", (event) => {
@@ -216,6 +261,7 @@ function boot(field: Field) {
   observer.observe(hero);
 
   draw(field, performance.now());
+  hero.classList.add("is-ready", "is-live");
   raf = requestAnimationFrame((t) => loop(field, t));
 }
 
@@ -394,12 +440,10 @@ function paintAccent(el: HTMLElement, tint: string, against: string) {
 function paintChrome(bg: string, tint: string) {
   paintAccent(document.documentElement, tint, DEFAULT_BG);
   paintAccent(hero, tint, bg);
-  hero.style.backgroundColor = bg;
-  hero.classList.toggle("is-light", luma(bg) > 0.62);
-  themeColor?.setAttribute("content", bg);
+  applyGround(bg);
 }
 
-Field.load()
+Field.load(`/engine.wasm?v=${WASM_REV}`)
   .then(boot)
   .catch((error: unknown) => {
     hero.classList.add("is-error");

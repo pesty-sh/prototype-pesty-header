@@ -71,9 +71,12 @@ pub enum Cycle {
     Random,
 }
 
-/// `Sequence` walks `ORDER`, so the list you edit is the list you see.
-/// Set this to `Cycle::Random` when the next click should be a roll.
-pub const CYCLE: Cycle = Cycle::Sequence;
+/// `Sequence` walks `ORDER`. `APPEAR_RANDOM` in `config.rs` turns on the roll.
+pub const CYCLE: Cycle = if crate::config::APPEAR_RANDOM {
+    Cycle::Random
+} else {
+    Cycle::Sequence
+};
 
 pub fn kind(index: usize) -> Appear {
     ORDER[index % len()]

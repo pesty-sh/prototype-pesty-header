@@ -10,13 +10,19 @@
 //!    stay the loudest thing. The top eases in so the bar is not a wall of cells.
 //! 5. `tier` picks dim, mid, or lit from how strong the glow is.
 //!
-//! Config inside `amount` and `vignette`:
-//! - The noise scrolls at `0.14` and `0.055` cells per second. Raise them
-//!   and the speckle drifts faster. Reduced motion freezes time, so this stops.
-//! - `0.78` near the end of `amount` is the overall density. Lower is sparser.
-//! - `vignette` starts opening up at radius `0.34`. The vertical fade is
-//!   the first `0.22` of the header height.
+//! A cursor inside the picture opens a wide well. Speckles in that radius
+//! are hoovered onto the pointer, and the cells they left stay quiet.
+//! Each speckle still belongs to its own cell. The well does not store a
+//! new point. When the pointer leaves that cell, the speckle is drawn
+//! there again.
+//!
+//! `NOISE_SCROLL_X`, `NOISE_SCROLL_Y`, `NOISE_DENSITY`, `NOISE_WELL_CELLS`,
+//! `NOISE_WELL_PULL`, `NOISE_WELL_MASS`, `VIGNETTE_RADIUS`, and
+//! `VIGNETTE_TOP` are in `config.rs`.
 
+use crate::config::{
+    NOISE_DENSITY, NOISE_SCROLL_X, NOISE_SCROLL_Y, NOISE_WELL_MASS, VIGNETTE_RADIUS, VIGNETTE_TOP,
+};
 use crate::palette::{self, Band};
 
 const N: i32 = 64;
@@ -82,15 +88,82 @@ pub fn hash01(x: i32, y: i32) -> f32 {
     (n & 0x00ff_ffff) as f32 / 16_777_215.0
 }
 
+/// Where the cursor is, in the same cell grid the field uses.
+/// `col` and `row` are continuous. `0.5` is the middle of the first cell.
+#[derive(Clone, Copy, Debug)]
+pub struct Well {
+    pub col: f32,
+    pub row: f32,
+    pub radius: f32,
+    pub pull: f32,
+}
+
+/// Which noise point a cell should draw.
+///
+/// `Own` is the cell itself. `Shifted` is a point from farther out in the
+/// well, drawn here because the cursor is holding it. `mass` keeps that
+/// clump visible. `Held` means this cell's point is in the clump, so the
+/// cell stays quiet until the cursor lets it go. The point's own cell is
+/// not given a new home.
+#[derive(Clone, Copy, Debug)]
+pub enum Sample {
+    Own,
+    Shifted { col: f32, row: f32, mass: f32 },
+    Held,
+}
+
+/// The point that belongs on this cell, or the point the cursor is holding.
+/// The noise grid is not written. A later call with the cursor gone
+/// returns `Own` again.
+pub fn sample_at(col: i32, row: i32, well: Option<Well>) -> Sample {
+    let Some(well) = well else {
+        return Sample::Own;
+    };
+    let pull = well.pull.clamp(0.0, 0.92);
+    if well.radius < 0.75 || pull < 0.02 {
+        return Sample::Own;
+    }
+    let dx = col as f32 + 0.5 - well.col;
+    let dy = row as f32 + 0.5 - well.row;
+    let dist = (dx * dx + dy * dy).sqrt();
+    if dist >= well.radius {
+        return Sample::Own;
+    }
+    // The whole disk is packed into a small core on the cursor.
+    // Everything outside that core has been picked up.
+    let inner = (1.0 - pull).clamp(0.06, 1.0);
+    let v = dist / well.radius;
+    if v > inner {
+        return Sample::Held;
+    }
+    let mass = (1.0 / inner).min(NOISE_WELL_MASS);
+    if dist < 0.04 {
+        return Sample::Shifted {
+            col: col as f32,
+            row: row as f32,
+            mass,
+        };
+    }
+    let scale = 1.0 / inner;
+    Sample::Shifted {
+        col: well.col + dx * scale - 0.5,
+        row: well.row + dy * scale - 0.5,
+        mass,
+    }
+}
+
 /// How much of this cell wants to be ink, before the Bayer test.
-pub fn amount(noise: &Noise, col: i32, row: i32, time_s: f32, vignette: f32) -> f32 {
-    let x = col as f32 / 9.0;
-    let y = row as f32 / 9.0;
-    // 0.14 and 0.055 are the scroll speeds. 0.78 at the end is the density.
-    let i = 0.62 * noise.sample(x + time_s * 0.14, y - time_s * 0.055)
+/// `col` and `row` are the noise point, not necessarily the cell on screen.
+pub fn amount(noise: &Noise, col: f32, row: f32, time_s: f32, vignette: f32) -> f32 {
+    let x = col / 9.0;
+    let y = row / 9.0;
+    let i = 0.62 * noise.sample(x + time_s * NOISE_SCROLL_X, y - time_s * NOISE_SCROLL_Y)
         + 0.38 * noise.sample(x * 0.55 - time_s * 0.08, y * 0.55 + time_s * 0.06);
-    let spark = 0.5 + 0.5 * (time_s * 1.1 + hash01(col, row) * std::f32::consts::TAU).sin();
-    vignette * (0.30 + 0.52 * i * i + 0.18 * spark) * 0.78
+    let spark = 0.5
+        + 0.5
+            * (time_s * 1.1 + hash01(col.round() as i32, row.round() as i32) * std::f32::consts::TAU)
+                .sin();
+    vignette * (0.30 + 0.52 * i * i + 0.18 * spark) * NOISE_DENSITY
 }
 
 pub fn threshold(col: i32, row: i32) -> f32 {
@@ -107,10 +180,9 @@ pub fn vignette(cx: f32, cy: f32, w: f32, h: f32) -> f32 {
     let nx = (cx / w) * 2.0 - 1.0;
     let ny = (cy / h) * 2.0 - 1.0;
     let rad = (nx * nx + ny * ny * 0.82).sqrt();
-    // 0.34 is where the edges start to fill in. 0.22 below is the top fade.
-    let edge = ((rad - 0.34) / 0.9).clamp(0.0, 1.0);
+    let edge = ((rad - VIGNETTE_RADIUS) / 0.9).clamp(0.0, 1.0);
     let radial = 0.18 + 0.82 * edge * edge;
-    let vert = (cy / h / 0.22).clamp(0.18, 1.0);
+    let vert = (cy / h / VIGNETTE_TOP).clamp(0.18, 1.0);
     radial * vert
 }
 
@@ -123,4 +195,45 @@ pub fn tier(influence: f32, tint: Option<[u8; 4]>) -> [u8; 4] {
         Band::Dim
     };
     palette::ink(band, tint)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn well_at(col: f32, row: f32, pull: f32) -> Well {
+        Well {
+            col,
+            row,
+            radius: 20.0,
+            pull,
+        }
+    }
+
+    fn dist(col: f32, row: f32, well: Well) -> f32 {
+        let dx = col + 0.5 - well.col;
+        let dy = row + 0.5 - well.row;
+        (dx * dx + dy * dy).sqrt()
+    }
+
+    #[test]
+    fn a_well_hoovers_a_wide_disk_and_releases_it() {
+        let near = well_at(10.5, 10.5, 0.88);
+        assert!(matches!(sample_at(10, 10, None), Sample::Own));
+        assert!(matches!(sample_at(40, 10, Some(near)), Sample::Own));
+        assert!(matches!(sample_at(11, 10, Some(well_at(10.5, 10.5, 0.0))), Sample::Own));
+
+        let Sample::Shifted { col, row, mass } = sample_at(11, 10, Some(near)) else {
+            panic!("the core should hold the gathered points");
+        };
+        let here = dist(11.0, 10.0, near);
+        let home = dist(col, row, near);
+        assert!(home > here + 1.0, "home {home} cell {here}");
+        assert!(home <= near.radius + 0.05, "home left the well {home}");
+        assert!(mass > 1.0);
+
+        assert!(matches!(sample_at(18, 10, Some(near)), Sample::Held));
+        let gone = well_at(80.5, 80.5, 0.88);
+        assert!(matches!(sample_at(18, 10, Some(gone)), Sample::Own));
+    }
 }

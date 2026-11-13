@@ -4,17 +4,20 @@
 //! This file holds them and talks to the page. It does not choose colours,
 //! letter shapes, or icons. Those live in the files below.
 //!
-//! Read in this order. Each file's top comment is the tutorial for that step,
-//! with the settings you can change:
+//! The numbers you can change live in `config.rs`. Each file below says
+//! what it draws. The settings themselves are not copied into those files.
 //!
-//! 1. `palette.rs` — the six colours.
-//! 2. `logo.rs` — the letter grid, and which rows are bright.
-//! 3. `appears.rs` — what a click on the word does. The list is `ORDER`.
-//! 4. `sprites.rs` — the icons. They run only after a release on the field.
-//! 5. `pointer.rs` — the mouse.
-//! 6. `motion.rs` — how long a letter fill takes (`REVEAL_MS`), and the drift.
-//! 7. `field.rs` — the speckled background.
-//! 8. `paint.rs` — one picture, numbered in the order it is drawn.
+//! Read in this order. Each file's top comment is the tutorial for that step:
+//!
+//! 1. `config.rs` — every knob: the self-moving sprite, the pops, the clock.
+//! 2. `palette.rs` — the six colours.
+//! 3. `logo.rs` — the letter grid, and which rows are bright.
+//! 4. `appears.rs` — what a click on the word does. The list is `ORDER`.
+//! 5. `sprites.rs` — the icons. A field release plays one. The drifter pops more.
+//! 6. `pointer.rs` — the mouse.
+//! 7. `motion.rs` — the letter clock, and the path the drifter follows.
+//! 8. `field.rs` — the speckled background.
+//! 9. `paint.rs` — one picture, numbered in the order it is drawn.
 //!    Start there if you want to see a frame happen.
 //!
 //! Process, once per frame. The page calls `frame`:
@@ -25,17 +28,17 @@
 //!
 //! The page copies `pixels` after that call. It never draws the field itself.
 //!
-//! Config that lives in this file:
-//! - A live title must be 1–160 columns and 8–48 rows. Anything else is refused.
-//! - At most 5 released icons stay alive. The oldest is dropped.
-//! - Tint `#d6ee6a` and background `#12140f` clear the demo override and
-//!   return to the colours in `palette.rs`. Kind `0` is the tint. Kind `1`
-//!   is the background.
+//! A live title must be 1–160 columns and 8–48 rows. Anything else is refused.
+//! Tint `#d6ee6a` and background `#12140f` clear the demo override and
+//! return to the colours in `palette.rs`. Kind `0` is the tint. Kind `1`
+//! is the background.
 //!
-//! An icon is created in one place only: `spawn_sprite`, and only after a
-//! release on the field. A release on the word calls `replay` instead.
+//! Icons are created in two places. `spawn_sprite` runs after a release on
+//! the field. `tick_drift` runs from the clock, from the sprite in `config.rs`
+//! that moves on its own. A release on the word calls `replay` instead.
 
 mod appears;
+mod config;
 mod field;
 mod logo;
 mod motion;
@@ -46,9 +49,6 @@ mod sprites;
 
 use pointer::{Pointer, Rect, Release};
 use sprites::Sprite;
-
-/// How many released icons can be alive at once.
-const MAX_SPRITES: usize = 5;
 
 pub struct Engine {
     pixels: Vec<u8>,
@@ -77,6 +77,8 @@ pub struct Engine {
     cell_w: f32,
     cell_h: f32,
     now: f64,
+    /// When the self-moving sprite next pops an icon.
+    drift_next: f64,
     reveal_from: f64,
     reveal: f32,
     reduced: bool,
@@ -114,6 +116,7 @@ impl Engine {
             cell_w: 0.0,
             cell_h: 0.0,
             now: 0.0,
+            drift_next: config::DRIFT_GAP_MIN_MS,
             reveal_from: 0.0,
             reveal: 0.0,
             reduced: false,
@@ -215,6 +218,32 @@ impl Engine {
             };
         }
         paint::paint(self);
+    }
+
+    /// The sprite that moves on its own pops one icon. At most one per frame,
+    /// so a big jump in the clock cannot fill the header.
+    pub(crate) fn tick_drift(&mut self, cell: f32) {
+        if !config::DRIFT_FIRE || self.reduced || self.width < 32 || self.height < 32 {
+            return;
+        }
+        if self.now < self.drift_next {
+            return;
+        }
+        let (x, y) = motion::wander(self.now, self.width as f32, self.height as f32);
+        let n = sprites::mix_point(self.now, x, y);
+        let icon = (n as usize) % sprites::ICONS.len();
+        let span = (config::DRIFT_GAP_MAX_MS - config::DRIFT_GAP_MIN_MS).max(0.0);
+        let gap = config::DRIFT_GAP_MIN_MS + span * f64::from((n >> 8) as f32 / u32::MAX as f32);
+        self.drift_next = self.now + gap;
+        self.insert_sprite(Sprite::pop(
+            x,
+            y,
+            self.now,
+            cell.max(2.0),
+            self.width as f32,
+            self.height as f32,
+            icon,
+        ));
     }
 
     pub fn pixels(&self) -> &[u8] {
@@ -372,16 +401,26 @@ impl Engine {
         }
     }
 
-    /// The only icon spawn. Called from a field release, never from the clock.
+    /// A field release. The drifter uses [`Engine::tick_drift`] instead.
     fn spawn_sprite(&mut self, x: f32, y: f32, now: f64, held_ms: f64) {
         let cell = (self.cell_w + self.cell_h).max(2.0) * 0.5;
-        // Five is the cap. The oldest icon is dropped so a long hold-release
-        // session cannot fill the header.
-        if self.sprites.len() >= MAX_SPRITES {
+        self.insert_sprite(Sprite::spawn(
+            x,
+            y,
+            now,
+            held_ms,
+            cell,
+            self.width as f32,
+            self.height as f32,
+            self.pending,
+        ));
+    }
+
+    fn insert_sprite(&mut self, sprite: Sprite) {
+        if self.sprites.len() >= config::MAX_SPRITES {
             self.sprites.remove(0);
         }
-        self.sprites
-            .push(Sprite::spawn(x, y, now, held_ms, cell, self.pending));
+        self.sprites.push(sprite);
     }
 }
 
@@ -642,6 +681,23 @@ mod tests {
         assert!(!engine.pointer_up(4.0, 4.0, 180.0));
         assert_eq!(engine.ripple_count(), 1);
         engine.frame(4_000.0, x, y, w, h, false);
+        // The click icon has finished. The next pop is still waiting out its gap.
+        assert_eq!(engine.ripple_count(), 0);
+        engine.frame(crate::config::DRIFT_GAP_MIN_MS, x, y, w, h, false);
+        assert!(engine.ripple_count() >= 1);
+        assert!(engine.ripple_count() <= crate::config::MAX_SPRITES as u32);
+    }
+
+    #[test]
+    fn the_drifter_pops_without_a_click_and_reduced_motion_clears_it() {
+        let mut engine = Engine::new();
+        engine.resize(480, 260);
+        let (x, y, w, h) = mark_for(400.0);
+        engine.frame(0.0, x, y, w, h, false);
+        assert_eq!(engine.ripple_count(), 0);
+        engine.frame(crate::config::DRIFT_GAP_MIN_MS, x, y, w, h, false);
+        assert_eq!(engine.ripple_count(), 1);
+        engine.frame(crate::config::DRIFT_GAP_MIN_MS, x, y, w, h, true);
         assert_eq!(engine.ripple_count(), 0);
     }
 
@@ -655,8 +711,9 @@ mod tests {
         let cx = x + w * 0.5;
         let cy = y + h * 0.5;
         engine.pointer_down(cx, cy, 2_000.0);
+        let before = engine.ripple_count();
         assert!(engine.pointer_up(cx, cy, 2_080.0));
-        assert_eq!(engine.ripple_count(), 0);
+        assert_eq!(engine.ripple_count(), before);
         engine.frame(2_080.0, x, y, w, h, false);
         assert!(engine.reveal() < 0.05, "{}", engine.reveal());
         assert_eq!(engine.appear_name(), "drop");

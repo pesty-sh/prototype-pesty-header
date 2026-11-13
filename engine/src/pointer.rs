@@ -13,16 +13,9 @@
 //! Quiet rectangles are the nav and the sentence. `quiet_factor` is 0 inside
 //! them and 1 once `reach` away, so the field does not paint through the type.
 //!
-//! Config, in `smooth`:
-//! - `FOLLOW` is how fast the glow position catches the cursor. `1.0` snaps.
-//!   Lower lags behind.
-//! - `STRENGTH` is how fast the glow fades in and out. Lower is slower.
-//! - Strength under `0.004` is treated as off, so the glow can finish.
+//! `POINTER_FOLLOW`, `POINTER_STRENGTH`, and `POINTER_OFF` are in `config.rs`.
 
-/// How fast the glow position catches the cursor. 1.0 snaps. Lower lags.
-const FOLLOW: f32 = 0.38;
-/// How fast the glow strength fades in and out. Lower is slower.
-const STRENGTH: f32 = 0.22;
+use crate::config::{POINTER_FOLLOW, POINTER_OFF, POINTER_STRENGTH};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rect {
@@ -121,8 +114,8 @@ impl Pointer {
                 self.y = self.raw_y;
                 self.has = true;
             } else {
-                self.x += (self.raw_x - self.x) * FOLLOW;
-                self.y += (self.raw_y - self.y) * FOLLOW;
+                self.x += (self.raw_x - self.x) * POINTER_FOLLOW;
+                self.y += (self.raw_y - self.y) * POINTER_FOLLOW;
             }
         }
         let target = if self.raw_inside {
@@ -130,8 +123,8 @@ impl Pointer {
         } else {
             0.0
         };
-        self.strength += (target - self.strength) * STRENGTH;
-        if self.strength < 0.004 {
+        self.strength += (target - self.strength) * POINTER_STRENGTH;
+        if self.strength < POINTER_OFF {
             self.strength = 0.0;
         }
     }

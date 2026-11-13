@@ -19,6 +19,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#12140f" />
+    <script>
+      // The field colour, before CSS or wasm. A white ?bg must not flash black.
+      (function () {
+        var raw = new URLSearchParams(location.search).get("bg");
+        if (!raw) return;
+        var body = String(raw).trim().replace(/^#/, "");
+        if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(body)) return;
+        if (body.length === 3) body = body.replace(/./g, function (digit) { return digit + digit; });
+        var color = "#" + body.toLowerCase();
+        var r = parseInt(body.slice(0, 2), 16) / 255;
+        var g = parseInt(body.slice(2, 4), 16) / 255;
+        var b = parseInt(body.slice(4, 6), 16) / 255;
+        var light = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.62;
+        var root = document.documentElement;
+        root.style.setProperty("--bg", color);
+        root.style.backgroundColor = color;
+        root.style.colorScheme = light ? "light" : "dark";
+        if (light) {
+          root.style.setProperty("--text", "#1a1c14");
+          root.style.setProperty("--muted", "#4d5244");
+          root.style.setProperty("--line", "#d5d3c6");
+        }
+        var theme = document.querySelector('meta[name="theme-color"]');
+        if (theme) theme.setAttribute("content", color);
+        var scheme = document.querySelector('meta[name="color-scheme"]');
+        if (scheme) scheme.setAttribute("content", light ? "light" : "dark");
+      })();
+    </script>
     <title>pesty.sh</title>
     <meta
       name="description"
@@ -36,6 +64,9 @@
           <a href="#pointer">Pointer</a>
           <a href="#motion">Motion</a>
           <a href="#logo">Logo</a>
+          <a href="#install">Install</a>
+          <a href="#start">Start</a>
+          <a href="#config">Config</a>
         </div>
         <p class="status">
           <span class="dot" aria-hidden="true"></span>
@@ -52,15 +83,17 @@
         <div class="quiet" id="copy">
           <h1>Mouse, motion, and the wordmark.</h1>
           <p class="lede">
-            The letters are a bitmap in a Rust field. Move and the nearest cells take the light.
-            Hold, and an icon charges. Release, and it appears, slides, or expands.
-            Click the word and the next appear plays.
+            The letters are a bitmap in a Rust field. Move and the cursor hoovers nearby speckles,
+            then lets them fall back. Hold, and an icon charges. A ball of pixels wanders on its
+            own and fires one trail every few seconds.
           </p>
           <ul class="hints">
-            <li><span>Move</span> wakes the nearest cells</li>
+            <li><span>Move</span> hoovers speckles onto the cursor</li>
+            <li><span>Leave</span> and those speckles fall back</li>
             <li><span>Hold</span> charges an icon</li>
             <li><span>Release</span> lets that icon run</li>
             <li><span>The word</span> plays the next appear</li>
+            <li><span>The drift</span> fires one trail, then a burst</li>
           </ul>
           <form id="live" class="live" autocomplete="off" hidden>
             <label class="live-field">
@@ -121,7 +154,8 @@
           <p class="eyebrow">Scope</p>
           <h2>Three jobs, one buffer.</h2>
           <p class="lede">
-            Pointer, motion, and the logo share a single RGBA buffer. This header is that buffer.
+            Pointer, motion, and the logo share a single RGBA buffer. The speckled ground is not a
+            fourth job. The cursor can hoover it, and the wander can fire into it.
           </p>
         </div>
         <dl class="meter" aria-hidden="true">
@@ -147,8 +181,9 @@
             <p class="idx">01</p>
             <h3>Pointer</h3>
             <p>
-              Where the cursor sits, how long the press has been held, and whether it landed on the
-              letters. The bar and the sentence are quiet rectangles, so the type stays put.
+              Where the cursor sits, and how long the press has been held. Inside a wide radius it
+              hoovers speckles onto itself and holds that clump. Move away and each speckle returns
+              to its own cell. The bar and the sentence are quiet rectangles, so the type stays put.
             </p>
           </article>
           <article id="motion">
@@ -156,8 +191,10 @@
             <h3>Motion</h3>
             <p>
               The mark prints from the left on the first load. Each click runs the next appear.
-              A release drops one icon. It may appear in place, slide away, or expand until it
-              fades. Reduced motion holds the mark finished and the field still.
+              A ball of pixels wanders the field. Every few seconds it fires one trail of pixels.
+              The trail lands at a random point inside the canvas and bursts into a random icon.
+              A release on the field still drops one icon of its own: it may appear, slide, or
+              expand. Reduced motion holds the mark finished, skips the wander, and drops no icons.
             </p>
           </article>
           <article id="logo">
@@ -165,10 +202,131 @@
             <h3>Logo</h3>
             <p>
               The word is a bitmap, crest on the ascenders and dim on the tails. The demo
-              redraws that bitmap from a title, a face, and two hex colours.
+              redraws that bitmap from a title, a face, and two hex colours. The page uses the
+              background hex while the wasm file is still loading.
             </p>
           </article>
         </div>
+
+        <section class="doc" id="install">
+          <p class="eyebrow">Setup</p>
+          <h2>Install</h2>
+          <p class="lede">
+            Node 20 or newer, and Rust with the browser target. Once per machine.
+          </p>
+          <pre><code>node --version
+npm --version
+rustc --version
+rustup target add wasm32-unknown-unknown</code></pre>
+          <p>
+            If <code>node</code> or <code>npm</code> is missing, install Node from
+            <a href="https://nodejs.org">nodejs.org</a> and open a new terminal. If
+            <code>rustc</code> is missing, install Rust from
+            <a href="https://rustup.rs">rustup.rs</a> and open a new terminal. The
+            <code>wasm32-unknown-unknown</code> target is what the page build uses.
+          </p>
+        </section>
+
+        <section class="doc" id="start">
+          <p class="eyebrow">First run</p>
+          <h2>Getting started</h2>
+          <p class="lede">From this folder. Leave the last command running, then open the page.</p>
+          <pre><code>npm install
+npm test
+npm run dev</code></pre>
+          <ol>
+            <li>
+              <code>npm install</code> downloads the JavaScript packages.
+              <code>node_modules/</code> is not committed.
+            </li>
+            <li>
+              <code>npm test</code> runs the Rust tests, builds <code>public/engine.wasm</code>,
+              and checks that file. The last line should contain <code>pesty engine ok</code>.
+            </li>
+            <li>
+              <code>npm run dev</code> builds the wasm again and serves the page.
+            </li>
+          </ol>
+          <p>
+            Open <a href="http://127.0.0.1:43123">127.0.0.1:43123</a>. You should see the word
+            <code>pesty.sh</code> in pale pixels, a speckled field, and <code>live</code> at the
+            top right. The port stays <strong>43123</strong> unless you set <code>PESTY_PORT</code>
+            for one command.
+          </p>
+          <p>
+            Move across the header. The cursor hoovers speckles from a wide radius and holds them.
+            Leave and they fall back onto their own points. Hold on the field, then release, and an
+            icon runs. Click the word and the next appear plays: print, drop, rise, bloom, spark,
+            then print again. A ball of pixels wanders on its own. Every few seconds it fires one
+            trail. That trail lands inside the canvas and bursts into a random icon.
+          </p>
+          <p>
+            On this dev server the boxes under the sentence are live. Title is the string drawn in
+            the field. Face is Pesty, Plex Mono, Georgia, or Impact. Tint and Background are hex
+            colours. <code>?demo=0</code> is the public page, with those boxes gone. A published
+            site opens them with <code>?demo</code>. A shared link can carry the strings:
+            <code>?demo&amp;text=hello&amp;face=georgia&amp;tint=ff6040&amp;bg=ffffff</code>.
+            The page paints that background while the wasm file is still loading.
+          </p>
+          <p>
+            If the browser asks for reduced motion, the letters are already finished, the wander
+            does not fire, and a release drops no icon. The pointer still lights the cells under it.
+          </p>
+          <p>
+            Press Ctrl+C once in the dev terminal and wait until it prints
+            <code>Port 43123 is free.</code> If that terminal is already gone,
+            <code>npm run stop</code> frees a Vite process, or <code>scripts/dev.mjs</code>, whose
+            working directory is this folder. A different program on 43123 is left running.
+          </p>
+        </section>
+
+        <section class="doc" id="config">
+          <p class="eyebrow">Knobs</p>
+          <h2>Config</h2>
+          <p class="lede">
+            Picture settings live in <code>engine/src/config.rs</code>. Edit that file, run
+            <code>npm run build:wasm</code>, and reload. The page does not read the file on its own.
+          </p>
+          <div class="config-grid">
+            <article>
+              <h3>Wander</h3>
+              <p>
+                <code>DRIFT_FIRE</code> turns the trail on. The ball of pixels stays either way.
+                <code>DRIFT_GAP_MIN_MS</code> and <code>DRIFT_GAP_MAX_MS</code> are the wait, five
+                to eight seconds. <code>TRAIL_DOTS</code> and <code>TRAIL_SPREAD</code> shape the
+                shot. <code>POP_EDGE</code> keeps the burst inside the canvas.
+              </p>
+            </article>
+            <article>
+              <h3>Noise</h3>
+              <p>
+                <code>NOISE_WELL_CELLS</code> is how far the cursor hoovers, in letter-cells.
+                <code>NOISE_WELL_PULL</code> is how hard it packs those speckles onto itself.
+                <code>NOISE_WELL_MASS</code> is how bright the clump can get. The points keep their
+                own places. <code>NOISE_DENSITY</code> is how many speckles the field keeps.
+              </p>
+            </article>
+            <article>
+              <h3>Pointer and icons</h3>
+              <p>
+                <code>POINTER_FOLLOW</code> is how fast the glow catches the cursor.
+                <code>CAST_RANDOM</code> rolls the icon and the play. <code>SLIDE_HOPS</code> and
+                <code>SLIDE_SPIT</code> belong to a travelling click. <code>MAX_SPRITES</code> caps
+                clicks and fired trails together.
+              </p>
+            </article>
+            <article>
+              <h3>Page</h3>
+              <p>
+                How often the page draws, and the pixel-ratio cap, are <code>FRAME_MS</code> and
+                <code>DPR_CAP</code> at the top of <code>src/main.ts</code>. Colours are the six
+                values in <code>engine/src/palette.rs</code>, repeated as <code>--bg</code>,
+                <code>--lit</code>, <code>--mid</code>, and <code>--crest</code> in
+                <code>src/style.css</code>. Letter shapes stay in <code>engine/mark.py</code>.
+              </p>
+            </article>
+          </div>
+        </section>
       </div>
     </main>
     <footer>

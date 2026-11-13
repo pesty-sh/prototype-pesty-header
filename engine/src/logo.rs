@@ -86,24 +86,19 @@ impl Grid {
     }
 }
 
-/// Where each colour ends, as a fraction of the letter height.
-/// `0` is the top. `1` is the tail. The last band, dim, is whatever is left.
-const CREST_UNTIL: f32 = 0.26;
-const HOVER_UNTIL: f32 = 0.37;
-const LIT_UNTIL: f32 = 0.58;
-const MID_UNTIL: f32 = 0.74;
+use crate::config::{BAND_CREST, BAND_HOVER, BAND_LIT, BAND_MID};
 
 /// Light band for a bitmap row. `t` is 0 at the ascender line and 1 at the tail.
 pub fn band_at(row: i32, rows: i32) -> Band {
     let span = (rows - 1).max(1) as f32;
     let t = (row as f32 / span).clamp(0.0, 1.0);
-    if t < CREST_UNTIL {
+    if t < BAND_CREST {
         Band::Crest
-    } else if t < HOVER_UNTIL {
+    } else if t < BAND_HOVER {
         Band::Hover
-    } else if t < LIT_UNTIL {
+    } else if t < BAND_LIT {
         Band::Lit
-    } else if t < MID_UNTIL {
+    } else if t < BAND_MID {
         Band::Mid
     } else {
         Band::Dim

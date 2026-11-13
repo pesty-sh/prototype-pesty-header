@@ -16,7 +16,7 @@ Three jobs, and only these three:
 
 The speckled background is not a fourth system. It is the ground those three jobs sit on. Most squares stay the background colour. The mouse, the drift, and a released icon are what light a square up.
 
-Icons do not enter the screen on their own. Press on the speckled field and an icon charges under the pointer. Release, and that icon appears, slides, or expands. Press on the word and the next letter animation plays instead. No icon is dropped.
+Icons do not enter the screen on their own. Press on the speckled field and an icon charges under the pointer. Release, and that icon appears, slides, or expands. A slide spins across the header, drops smaller icons as it moves, and bursts each time it lands. Press on the word and the next letter animation plays instead. No icon is dropped.
 
 ## Words this repo uses
 
@@ -107,7 +107,7 @@ Read in this order. The comment at the top of each file is a short tutorial: the
 2. `engine/src/palette.rs` — the six colours. `src/style.css` repeats four of them for the page around the canvas.
 3. `engine/src/logo.rs` and `engine/src/mark.txt` — the letter grid. `#` is ink, `.` is empty.
 4. `engine/src/appears.rs` — what a click on the word does. The list is the `ORDER` array.
-5. `engine/src/sprites.rs` — the icons. `CAST` is `Random`. Nothing here runs unless the mouse released on the field.
+5. `engine/src/sprites.rs` — the icons. A field release plays one. The sprite that moves on its own pops more. The knobs are in `engine/src/config.rs`.
 6. `engine/src/pointer.rs` — the mouse. A release on the word is a replay. A release on the field is a stamp.
 7. `engine/src/motion.rs` — how long an appear takes (`REVEAL_MS`, 1100ms) and the slow drift.
 8. `engine/src/field.rs` — the speckled ground.

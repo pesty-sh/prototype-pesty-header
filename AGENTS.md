@@ -21,6 +21,8 @@ Read `docs/engine.md` before changing a picture. The edit order there is the ord
 
 | Task | File |
 | --- | --- |
+| Picture settings | `engine/src/config.rs` |
+| Page frame rate, pixel ratio | top of `src/main.ts` |
 | Colours | `engine/src/palette.rs` and the same hexes in `src/style.css` |
 | Letter shapes | `engine/mark.py`, then `python3 engine/mark.py` |
 | Bitmap rows, hit box, light bands | `engine/src/logo.rs` and `engine/src/mark.txt` |

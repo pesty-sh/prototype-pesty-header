@@ -2,6 +2,45 @@
 
 All notable changes to the pesty.sh header. Dates are Europe/London.
 
+## 0.1.6 — 13 November 2026
+
+### Changed
+
+- The cursor hoovers speckles from a wider radius and holds them. The cells they left stay quiet until the cursor moves off, and then the speckles fall back.
+
+## 0.1.5 — 13 November 2026
+
+### Changed
+
+- Speckles inside a small radius pull toward the cursor and gather there. Each point keeps its own place. When the cursor moves off that place, the speckle falls back.
+- The page and the canvas use the field background while wasm loads. A white `?bg` no longer starts black.
+
+## 0.1.4 — 13 November 2026
+
+### Changed
+
+- A fired trail lands at a random point inside the canvas. The burst no longer opens on the top edge.
+- The wait between fires is rolled from five seconds up to eight.
+
+## 0.1.3 — 13 November 2026
+
+### Changed
+
+- The wander is a ball of pixels again. Every few seconds it fires one trail of pixels. The trail lands and bursts into a random icon. The gap is rolled between the two waits in `engine/src/config.rs`.
+- Titles use Satoshi Bold.
+
+## 0.1.2 — 13 November 2026
+
+### Changed
+
+- The sprite that moves on its own, not the mouse, pops a random icon on a timer. That icon flies to a random point and bursts. The knobs for it, and the other picture settings, are in `engine/src/config.rs`.
+
+## 0.1.1 — 13 November 2026
+
+### Changed
+
+- A slide spins across the header. As it moves it drops smaller random icons, and it bursts on each random landing. The dropped icons fly to their own landing and burst too. They are drawn with that one release, so the cap is still five live icons.
+
 ## 0.1.0 — 3 November 2026
 
 ### Added

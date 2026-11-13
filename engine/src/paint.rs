@@ -12,20 +12,25 @@
 //!    The shape of the fill is `appears.rs`.
 //! 4. Collect glows: the pointer, then a slow drift when motion is allowed.
 //! 5. Collect icons. First the one charging under a held finger, then any
-//!    released earlier that are still alive. A release on the word is not
-//!    in this list. It restarts the letter fill instead.
+//!    released earlier that are still alive. A slide also contributes the
+//!    smaller icons it has spat out. A release on the word is not in this
+//!    list. It restarts the letter fill instead.
 //! 6. For each cell, decide. A letter cell the appear has revealed takes the
 //!    overhead colour, lifted toward crest by a nearby glow. Every other cell
 //!    is the field. Noise has to clear a threshold, and the pointer, the
-//!    drift, and the icons are what push it up into mid and lit.
+//!    drift, and the icons are what push it up into mid and lit. Inside a
+//!    wide radius the pointer hoovers those speckles onto itself. The cells
+//!    they left stay quiet. They fall back once the pointer leaves.
 //!
-//! Config in this file. Sizes are in letter-cells, so they scale with the word:
-//! - Quiet fade is 7 cells. Raise it and the glow stays off farther from the type.
-//! - Pointer glow radius is 6.5 cells, plus 8 more when the pointer is at full strength.
-//! - The drift glow has strength 0.24 and radius 8 cells. It dims while the pointer is strong.
+//! Glow sizes are in `config.rs` (`QUIET_REACH_CELLS`, `POINTER_REACH_CELLS`,
+//! `DRIFT_GLOW`, and the rest of that group).
 
 use crate::appears;
-use crate::field::{self, Noise};
+use crate::config::{
+    DRIFT_GLOW, DRIFT_GLOW_DIM, DRIFT_GLOW_REACH_CELLS, NOISE_WELL_CELLS, NOISE_WELL_PULL,
+    POINTER_REACH_CELLS, POINTER_REACH_EXTRA, QUIET_REACH_CELLS,
+};
+use crate::field::{self, Noise, Well};
 use crate::logo::Grid;
 use crate::motion;
 use crate::palette::{self, Band};
@@ -66,7 +71,7 @@ pub fn paint(engine: &mut Engine) {
 
     let cell = (cw + ch) * 0.5;
     // How far past a quiet box the glow fades back in. 7 letter-cells.
-    let quiet_reach = cell * 7.0;
+    let quiet_reach = cell * QUIET_REACH_CELLS;
     let q_pointer = pointer::quiet_factor(
         engine.pointer.raw_x,
         engine.pointer.raw_y,
@@ -94,43 +99,56 @@ pub fn paint(engine: &mut Engine) {
             x: engine.pointer.x,
             y: engine.pointer.y,
             strength: engine.pointer.strength,
-            reach: cell * (6.5 + 8.0 * engine.pointer.strength),
+            reach: cell * (POINTER_REACH_CELLS + POINTER_REACH_EXTRA * engine.pointer.strength),
         });
     }
     if !reduced {
         let (wx, wy) = motion::wander(now, width as f32, height as f32);
-        let dim = 1.0 - engine.pointer.strength * 0.7;
+        let dim = 1.0 - engine.pointer.strength * DRIFT_GLOW_DIM;
         glows.push(Glow {
             x: wx,
             y: wy,
-            strength: 0.24 * dim,
-            reach: cell * 8.0,
+            strength: DRIFT_GLOW * dim,
+            reach: cell * DRIFT_GLOW_REACH_CELLS,
         });
     }
 
     // 5. Icons. The charge under a held pointer, then icons already released.
     //    Reduced motion drops the list. A press on the word (`glyph`) is not an icon.
-    let mut stamps: Vec<Stamp> = Vec::with_capacity(engine.sprites.len() + 1);
+    let mut stamps: Vec<Stamp> = Vec::with_capacity(engine.sprites.len() * 8 + 1);
     if reduced {
         engine.sprites.clear();
-    } else if engine.pointer.down && !engine.pointer.glyph {
-        let held = (now - engine.pointer.down_at).max(0.0);
-        stamps.push(sprites::charge_stamp(
-            engine.pointer.x,
-            engine.pointer.y,
-            held,
-            cell,
-            engine.pending.icon,
-        ));
-    }
-    if !reduced {
+    } else {
+        // The wander ball fires one pixel trail. The mouse is not involved.
+        engine.tick_drift(cell);
+        if engine.pointer.down && !engine.pointer.glyph {
+            let held = (now - engine.pointer.down_at).max(0.0);
+            stamps.push(sprites::charge_stamp(
+                engine.pointer.x,
+                engine.pointer.y,
+                held,
+                cell,
+                engine.pending.icon,
+            ));
+        }
         engine.sprites.retain(|sprite| sprite.live(now).is_some());
         for sprite in &engine.sprites {
-            if let Some(stamp) = sprite.live(now) {
-                stamps.push(stamp);
-            }
+            sprite.push_stamps(now, &mut stamps);
         }
     }
+
+    // The well follows the pointer. Pull eases off with the glow, so a
+    // speckle falls back to its own cell as the pointer leaves it.
+    let well = if !reduced && engine.pointer.strength > 0.02 {
+        Some(Well {
+            col: (engine.pointer.x - mark.x) / cw,
+            row: (engine.pointer.y - mark.y) / ch,
+            radius: NOISE_WELL_CELLS,
+            pull: NOISE_WELL_PULL * engine.pointer.strength.min(1.0),
+        })
+    } else {
+        None
+    };
 
     let col0 = ((-mark.x) / cw).floor() as i32 - 1;
     let row0 = ((-mark.y) / ch).floor() as i32 - 1;
@@ -162,6 +180,7 @@ pub fn paint(engine: &mut Engine) {
                     progress,
                     time_s,
                     tint,
+                    well,
                 },
             );
             if let Some(color) = color {
@@ -196,6 +215,7 @@ struct CellIn<'a> {
     progress: f32,
     time_s: f32,
     tint: Option<[u8; 4]>,
+    well: Option<Well>,
 }
 
 fn cell_color(grid: &Grid, cell: &CellIn<'_>) -> Option<[u8; 4]> {
@@ -234,8 +254,18 @@ fn cell_color(grid: &Grid, cell: &CellIn<'_>) -> Option<[u8; 4]> {
     }
 
     let vig = field::vignette(cx, cy, cell.width as f32, cell.height as f32) * q;
-    let base = field::amount(cell.noise, cell.col, cell.row, cell.time_s, vig);
-    if base + influence * 0.9 <= field::threshold(cell.col, cell.row) {
+    let (ncol, nrow, mass) = match field::sample_at(cell.col, cell.row, cell.well) {
+        field::Sample::Own => (cell.col as f32, cell.row as f32, 1.0),
+        field::Sample::Shifted { col, row, mass } => (col, row, mass),
+        field::Sample::Held => {
+            if influence * 0.9 <= field::threshold(cell.col, cell.row) {
+                return None;
+            }
+            return Some(field::tier(influence, cell.tint));
+        }
+    };
+    let base = field::amount(cell.noise, ncol, nrow, cell.time_s, vig) * mass;
+    if base + influence * 0.9 <= field::threshold(ncol.round() as i32, nrow.round() as i32) {
         return None;
     }
     Some(field::tier(influence, cell.tint))

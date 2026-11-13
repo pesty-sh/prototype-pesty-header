@@ -7,7 +7,7 @@ description: Update the pesty.sh pixel header — the Rust pointer, motion, and 
 
 The pixel header is a Rust engine (`engine/`) compiled to WebAssembly and blitted by a Vite page (`src/`). The engine has three scopes only: pointer, motion, and the `pesty.sh` wordmark.
 
-Read `README.md` for the first-timer path, then `AGENTS.md` and `docs/engine.md`. This skill is the short version of those files. `docs/engine.md` opens with one frame in plain words. Icons spawn only from a field release.
+Read `README.md` for the first-timer path, then `AGENTS.md` and `docs/engine.md`. This skill is the short version of those files. `docs/engine.md` opens with one frame in plain words. Picture knobs are in `engine/src/config.rs`. A click icon spawns from a field release. The wander stays a pixel ball. `DRIFT_FIRE` lets it shoot one pixel trail on a random wait of at least five seconds. The trail lands at a random point inside the canvas and bursts into a random icon.
 
 ## Source
 
@@ -29,10 +29,10 @@ Edit in this order. The catalogs are `appears.rs` and `sprites.rs`.
 - Live title: demo only. Dev server, or `?demo` on a published build. `?demo=0` is the public page and removes the title, face, tint, and background boxes. `?text=` and `?face=` (`pesty`, `plex`, `georgia`, `impact`). Tint and background are hex strings (`?tint=` and `?bg=`, no `#`). Defaults `#d6ee6a` and `#12140f` keep the baked palette. The engine takes the cells through `engine_mark_prepare` / `engine_mark_commit`, and the hex through `engine_hex_prepare` / `engine_hex_commit` (kind 0 tint, kind 1 background).
 - Bitmap and light bands: `engine/src/logo.rs`, `engine/src/mark.txt`
 - Click appears: `engine/src/appears.rs`. Reorder `ORDER`. Add a variant, a name, and a branch in `shows`. `CYCLE` is `Sequence` or `Random`.
-- Icons: `engine/src/sprites.rs`. 15×15, `#` and `.` only. `CAST` is `Random` or `First`. Plays are `Appear`, `Slide`, `Expand`. A new play is a variant plus a branch in `Sprite::place`.
+- Icons: `engine/src/sprites.rs`. 15×15, `#` and `.` only. `CAST` is `Random` or `First`. Plays are `Appear`, `Slide`, `Expand`. Slide spins across the header, spits smaller random icons, and bursts on each landing. A new play is a variant plus a branch in `Sprite::place`.
 - Pointer, quiet rects, charge: `engine/src/pointer.rs`
 - Appear clock (`REVEAL_MS`, 1100ms) and wander: `engine/src/motion.rs`
-- Noise, Bayer, vignette: `engine/src/field.rs`
+- Noise, Bayer, vignette: `engine/src/field.rs`. A wide cursor well (`NOISE_WELL_CELLS`) hoovers speckles onto the pointer. They fall back when the pointer leaves. The noise points themselves are not moved.
 - Frame, numbered in `paint`: `engine/src/paint.rs`
 - `Engine` and wasm exports: `engine/src/lib.rs` (exports are `cfg`'d to wasm32)
 - Canvas size and pointer events: `src/main.ts`
