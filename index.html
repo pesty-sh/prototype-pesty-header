@@ -284,8 +284,9 @@ npm run dev</code></pre>
           <p class="eyebrow">Knobs</p>
           <h2>Config</h2>
           <p class="lede">
-            Picture settings live in <code>engine/src/config.rs</code>. Edit that file, run
-            <code>npm run build:wasm</code>, and reload. The page does not read the file on its own.
+            Picture settings live in <code>engine/src/config.rs</code>. A host can replace the
+            ball, the magnet, the quiet fade, and the speckle colours from attributes on the header
+            element. A missing attribute keeps the constant.
           </p>
           <div class="config-grid">
             <article>
@@ -300,10 +301,11 @@ npm run dev</code></pre>
             <article>
               <h3>Noise</h3>
               <p>
-                <code>NOISE_WELL_CELLS</code> is how far a speckle will slide, in letter-cells.
-                <code>NOISE_WELL_PULL</code> is how far it travels toward the cursor.
-                <code>NOISE_WELL_MASS</code> is how bright the clump can get. The points keep their
-                own places. <code>NOISE_DENSITY</code> is how many speckles the field keeps.
+                <code>data-rust-magnet</code> and <code>data-rust-pull</code> are the slide.
+                <code>data-rust-noise</code> is the resting speckle.
+                <code>data-rust-noise-lit</code> is the speckle under a glow. One hex is flat.
+                Both are a gradient. A pale hex near the ground replaces a white overlay.
+                The points keep their own places.
               </p>
             </article>
             <article>

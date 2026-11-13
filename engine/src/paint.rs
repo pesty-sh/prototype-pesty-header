@@ -26,10 +26,7 @@
 //! `DRIFT_GLOW`, and the rest of that group).
 
 use crate::appears;
-use crate::config::{
-    DRIFT_GLOW, DRIFT_GLOW_DIM, DRIFT_GLOW_REACH_CELLS, NOISE_WELL_CELLS, NOISE_WELL_PULL,
-    POINTER_REACH_CELLS, POINTER_REACH_EXTRA, QUIET_REACH_CELLS,
-};
+use crate::config::{DRIFT_GLOW_DIM, POINTER_REACH_CELLS, POINTER_REACH_EXTRA};
 use crate::field::{self, Noise, Well};
 use crate::logo::Grid;
 use crate::motion;
@@ -70,8 +67,8 @@ pub fn paint(engine: &mut Engine) {
     engine.cell_h = ch;
 
     let cell = (cw + ch) * 0.5;
-    // How far past a quiet box the glow fades back in. 7 letter-cells.
-    let quiet_reach = cell * QUIET_REACH_CELLS;
+    // How far past a quiet box the glow fades back in.
+    let quiet_reach = cell * engine.tune.quiet_reach;
     let q_pointer = pointer::quiet_factor(
         engine.pointer.raw_x,
         engine.pointer.raw_y,
@@ -108,8 +105,8 @@ pub fn paint(engine: &mut Engine) {
         glows.push(Glow {
             x: wx,
             y: wy,
-            strength: DRIFT_GLOW * dim,
-            reach: cell * DRIFT_GLOW_REACH_CELLS,
+            strength: engine.tune.drift_glow * dim,
+            reach: cell * engine.tune.drift_reach,
         });
     }
 
@@ -145,8 +142,8 @@ pub fn paint(engine: &mut Engine) {
         Some(Well {
             col: (engine.pointer.x - mark.x) / cw,
             row: (engine.pointer.y - mark.y) / ch,
-            radius: NOISE_WELL_CELLS,
-            pull: NOISE_WELL_PULL * engine.pointer.strength.min(1.0),
+            radius: engine.tune.well_cells,
+            pull: engine.tune.well_pull * engine.pointer.strength.min(1.0),
         })
     } else {
         None
@@ -182,6 +179,8 @@ pub fn paint(engine: &mut Engine) {
                     progress,
                     time_s,
                     tint,
+                    noise_ink: engine.noise_ink,
+                    noise_lit: engine.noise_lit,
                     well,
                 },
             );
@@ -217,6 +216,8 @@ struct CellIn<'a> {
     progress: f32,
     time_s: f32,
     tint: Option<[u8; 4]>,
+    noise_ink: Option<[u8; 4]>,
+    noise_lit: Option<[u8; 4]>,
     well: Option<Well>,
 }
 
@@ -264,7 +265,25 @@ fn cell_color(grid: &Grid, cell: &CellIn<'_>) -> Option<[u8; 4]> {
     if base + influence * 0.9 <= field::threshold(ncol.round() as i32, nrow.round() as i32) {
         return None;
     }
-    Some(field::tier(influence, cell.tint))
+    Some(field_ink(influence, cell.tint, cell.noise_ink, cell.noise_lit))
+}
+
+/// A resting speckle and a lit speckle. One colour is flat. Both are a
+/// gradient along the glow. Neither set keeps the baked field bands.
+fn field_ink(
+    influence: f32,
+    tint: Option<[u8; 4]>,
+    noise: Option<[u8; 4]>,
+    noise_lit: Option<[u8; 4]>,
+) -> [u8; 4] {
+    match (noise, noise_lit) {
+        (None, None) => field::tier(influence, tint),
+        (Some(color), None) | (None, Some(color)) => color,
+        (Some(quiet), Some(hot)) => {
+            let t = (influence / 0.55).clamp(0.0, 1.0);
+            palette::mix(quiet, hot, t)
+        }
+    }
 }
 
 fn glow_at(x: f32, y: f32, glows: &[Glow]) -> f32 {

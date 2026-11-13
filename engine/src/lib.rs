@@ -31,7 +31,11 @@
 //! A live title must be 1–160 columns and 8–48 rows. Anything else is refused.
 //! Tint `#d6ee6a` and background `#12140f` clear the demo override and
 //! return to the colours in `palette.rs`. Kind `0` is the tint. Kind `1`
-//! is the background.
+//! is the background. Kind `2` is the resting speckle. Kind `3` is the
+//! speckle under a glow. Empty kinds 2 and 3 leave the baked field bands.
+//!
+//! `tune` replaces five picture sizes for one visit. A non-finite number
+//! keeps the constant in `config.rs`.
 //!
 //! Icons are created in two places. `spawn_sprite` runs after a release on
 //! the field. `tick_drift` runs from the clock, from the sprite in `config.rs`
@@ -49,6 +53,27 @@ mod sprites;
 
 use pointer::{Pointer, Rect, Release};
 use sprites::Sprite;
+
+/// The five sizes a page can replace without rebuilding the wasm.
+pub struct Tune {
+    pub drift_glow: f32,
+    pub drift_reach: f32,
+    pub well_cells: f32,
+    pub well_pull: f32,
+    pub quiet_reach: f32,
+}
+
+impl Tune {
+    fn baked() -> Self {
+        Self {
+            drift_glow: config::DRIFT_GLOW,
+            drift_reach: config::DRIFT_GLOW_REACH_CELLS,
+            well_cells: config::NOISE_WELL_CELLS,
+            well_pull: config::NOISE_WELL_PULL,
+            quiet_reach: config::QUIET_REACH_CELLS,
+        }
+    }
+}
 
 pub struct Engine {
     pixels: Vec<u8>,
@@ -71,6 +96,11 @@ pub struct Engine {
     tint: Option<[u8; 4]>,
     /// Ground that failed the dither test. `None` keeps [`palette::BG`].
     background: Option<[u8; 4]>,
+    /// Resting speckle. `None` keeps the field bands.
+    noise_ink: Option<[u8; 4]>,
+    /// Speckle under a glow. With `noise`, the two are a gradient.
+    noise_lit: Option<[u8; 4]>,
+    tune: Tune,
     /// Bytes the page fills before [`Engine::commit_hex`].
     hex: Vec<u8>,
     mark: Rect,
@@ -106,6 +136,9 @@ impl Engine {
             scratch_rows: 0,
             tint: None,
             background: None,
+            noise_ink: None,
+            noise_lit: None,
+            tune: Tune::baked(),
             hex: vec![0; 16],
             mark: Rect {
                 x: 0.0,
@@ -336,7 +369,7 @@ impl Engine {
         self.hex.as_mut_ptr()
     }
 
-    /// `kind` 0 is the text tint, 1 is the background. `len` is the byte count written.
+    /// `kind` 0 tint, 1 background, 2 resting speckle, 3 lit speckle.
     pub fn commit_hex(&mut self, kind: u32, len: u32) -> bool {
         let n = (len as usize).min(self.hex.len());
         let mut buf = [0u8; 16];
@@ -382,7 +415,35 @@ impl Engine {
                 };
                 true
             }
+            2 => {
+                self.noise_ink = Some(color);
+                true
+            }
+            3 => {
+                self.noise_lit = Some(color);
+                true
+            }
             _ => false,
+        }
+    }
+
+    /// Five picture sizes. A non-finite value keeps the baked constant.
+    /// `pull` is clamped under 1 so a speckle can still slide back.
+    pub fn tune(&mut self, glow: f32, reach: f32, cells: f32, pull: f32, quiet: f32) {
+        if glow.is_finite() && glow >= 0.0 {
+            self.tune.drift_glow = glow;
+        }
+        if reach.is_finite() && reach > 0.0 {
+            self.tune.drift_reach = reach;
+        }
+        if cells.is_finite() && cells > 0.0 {
+            self.tune.well_cells = cells;
+        }
+        if pull.is_finite() && pull >= 0.0 {
+            self.tune.well_pull = pull.min(0.92);
+        }
+        if quiet.is_finite() && quiet > 0.0 {
+            self.tune.quiet_reach = quiet;
         }
     }
 
@@ -390,6 +451,8 @@ impl Engine {
         match kind {
             0 => self.tint = None,
             1 => self.background = None,
+            2 => self.noise_ink = None,
+            3 => self.noise_lit = None,
             _ => return false,
         }
         true
@@ -599,6 +662,18 @@ mod ffi {
     #[no_mangle]
     pub extern "C" fn engine_hex_commit(ptr: u32, kind: u32, len: u32) -> u32 {
         u32::from(engine(ptr).commit_hex(kind, len))
+    }
+
+    #[no_mangle]
+    pub extern "C" fn engine_tune(
+        ptr: u32,
+        glow: f32,
+        reach: f32,
+        cells: f32,
+        pull: f32,
+        quiet: f32,
+    ) {
+        engine(ptr).tune(glow, reach, cells, pull, quiet);
     }
 
     #[no_mangle]
@@ -829,5 +904,37 @@ mod tests {
         assert!(engine.commit_hex(0, 7));
         engine.frame(0.0, x, y, w, h, true);
         assert!(count(&engine, palette::CREST) * 4 < crest);
+    }
+
+    #[test]
+    fn a_noise_colour_paints_speckles_and_leaves_the_letters() {
+        let mut engine = Engine::new();
+        engine.resize(320, 180);
+        let (x, y, w, h) = mark_for(240.0);
+        let quiet = [0xc4, 0x96, 0xe6, 0xff];
+        let hot = [0xec, 0xb0, 0xf6, 0xff];
+        assert!(engine.apply_hex(2, "#c496e6"));
+        assert!(engine.apply_hex(3, "#ecb0f6"));
+        engine.frame(0.0, x, y, w, h, true);
+        assert!(count(&engine, quiet) > 20, "resting speckles use the quiet colour");
+        assert_eq!(count(&engine, hot), 0, "no glow, so the lit stop stays unused");
+        assert!(count(&engine, palette::CREST) > 40);
+        assert!(engine.apply_hex(2, ""));
+        assert!(engine.apply_hex(3, ""));
+        engine.frame(0.0, x, y, w, h, true);
+        assert_eq!(count(&engine, quiet), 0);
+    }
+
+    #[test]
+    fn tune_replaces_a_finite_knob_and_keeps_a_missing_one() {
+        let mut engine = Engine::new();
+        engine.tune(0.5, f32::NAN, 9.0, 0.0, f32::NAN);
+        assert_eq!(engine.tune.drift_glow, 0.5);
+        assert_eq!(engine.tune.drift_reach, config::DRIFT_GLOW_REACH_CELLS);
+        assert_eq!(engine.tune.well_cells, 9.0);
+        assert_eq!(engine.tune.well_pull, 0.0);
+        assert_eq!(engine.tune.quiet_reach, config::QUIET_REACH_CELLS);
+        engine.tune(f32::NAN, f32::NAN, f32::NAN, 1.4, f32::NAN);
+        assert_eq!(engine.tune.well_pull, 0.92);
     }
 }

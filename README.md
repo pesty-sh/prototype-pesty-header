@@ -69,11 +69,25 @@ Press Ctrl+C once in the dev terminal and wait until it prints `Port 43123 is fr
 
 ## Config
 
-Picture settings live in `engine/src/config.rs`. Edit that file, run `npm run build:wasm`, and reload. The page does not read the file on its own.
+Picture settings live in `engine/src/config.rs`. Those constants are the defaults. A host can replace five of them, and the speckle colours, from attributes on the header element. A missing attribute keeps the constant. The query string is only a cache buster for `engine.wasm`.
+
+| Attribute | Constant | Default |
+| --- | --- | --- |
+| `data-rust-ball` | `DRIFT_GLOW_REACH_CELLS` | 12 letter-cells, the ball radius |
+| `data-rust-ball-strength` | `DRIFT_GLOW` | 0.276 glow strength |
+| `data-rust-magnet` | `NOISE_WELL_CELLS` | 13.8 letter-cells |
+| `data-rust-pull` | `NOISE_WELL_PULL` | 0.88, kept under 1 |
+| `data-rust-quiet-reach` | `QUIET_REACH_CELLS` | 7 letter-cells past a quiet box |
+| `data-rust-noise` | hex kind 2 | resting speckle. Empty keeps the field bands |
+| `data-rust-noise-lit` | hex kind 3 | speckle under the cursor or the ball |
+
+One noise hex paints every speckle that colour. Both hexes are a gradient from the resting colour toward the lit colour as the glow strengthens. A pale hex near the ground replaces a translucent white layer. Letters stay on the tint.
+
+`DRIFT_GLOW_DIM` (0.7) still fades the ball while the pointer is strong. The ball stays a glow.
 
 **Wander.** `DRIFT_FIRE` turns the trail on. The ball of pixels stays either way. `DRIFT_GAP_MIN_MS` and `DRIFT_GAP_MAX_MS` are the wait, five to eight seconds. `TRAIL_DOTS` and `TRAIL_SPREAD` shape the shot. `POP_EDGE` keeps the burst inside the canvas.
 
-**Noise.** `NOISE_WELL_CELLS` is how far a speckle will slide, in letter-cells. `NOISE_WELL_PULL` is how far it travels toward the cursor. `NOISE_WELL_MASS` is how bright the clump can get. The points keep their own places. `NOISE_DENSITY` is how many speckles the field keeps.
+**Noise.** `NOISE_WELL_CELLS` is how far a speckle will slide, in letter-cells. `NOISE_WELL_PULL` is how far it travels toward the cursor. `NOISE_WELL_MASS` is how bright the clump can get. The points keep their own places. `NOISE_DENSITY` is how many speckles the field keeps. Changing the slide after the wasm is built is `data-rust-magnet` and `data-rust-pull`.
 
 **Pointer and icons.** `POINTER_FOLLOW` is how fast the glow catches the cursor. `CAST_RANDOM` rolls the icon and the play. `SLIDE_HOPS` and `SLIDE_SPIT` belong to a travelling click. `MAX_SPRITES` caps clicks and fired trails together.
 

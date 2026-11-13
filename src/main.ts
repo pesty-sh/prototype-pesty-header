@@ -108,7 +108,7 @@ applyGround(ground);
 // Picture knobs (the self-moving sprite, pops, clock, glow) are in
 // engine/src/config.rs. Rebuild the wasm after editing that file.
 // Bump this when that wasm changes so a reload skips a cached copy.
-const WASM_REV = "0.1.7";
+const WASM_REV = "0.1.7.1";
 
 // Device pixel ratio cap. 2 stays sharp without a 3× buffer.
 const DPR_CAP = 2;

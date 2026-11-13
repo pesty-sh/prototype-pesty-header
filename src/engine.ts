@@ -10,6 +10,7 @@
 // Config that crosses this file:
 // - Bools are `0` or `1`. Rust has no boolean in the wasm exports.
 // - `setHex` kind `0` is the tint. Kind `1` is the background.
+//   Kind `2` is a resting speckle. Kind `3` is a speckle under a glow.
 //   The string is at most 16 bytes (`#rrggbb` fits).
 // - `setMark` writes one byte per cell. `1` is ink. `0` is empty.
 //   The size limits (1–160 columns, 8–48 rows) are checked in engine/src/lib.rs.

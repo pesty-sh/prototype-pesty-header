@@ -1,6 +1,11 @@
 //! Every knob for the picture. Edit this file, then rebuild the wasm
 //! (`npm run build:wasm`) and reload the page.
 //!
+//! A host can replace five of these for one visit without a rebuild.
+//! `Engine::tune` takes the ball strength, the ball radius, the magnet
+//! radius, the magnet pull, and the quiet fade. A non-finite number keeps
+//! the constant below. Speckle colours are hex kinds 2 and 3.
+//!
 //! The page's own knobs — how often it draws, the pixel-ratio cap — sit at
 //! the top of `src/main.ts`. Colours stay in `palette.rs` and `src/style.css`.
 //! Letter shapes stay in `engine/mark.py`.
