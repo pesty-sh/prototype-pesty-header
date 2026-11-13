@@ -10,7 +10,7 @@ If you only want the page running, follow [Install](#install) and [Getting start
 
 Three jobs, and only these three. Pointer, motion, and the logo share one RGBA buffer.
 
-- **Pointer.** Where the cursor sits, and how long a press has been held. Inside a wide radius it hoovers speckles onto itself and holds that clump. Move away and each speckle returns to its own cell. The bar and the sentence are quiet rectangles, so the type stays put.
+- **Pointer.** Where the cursor sits, and how long a press has been held. Inside a wide radius a speckle slides toward the cursor as it approaches, and slides back out as the cursor moves away. The bar and the sentence are quiet rectangles, so the type stays put.
 - **Motion.** The mark prints from the left on the first load. Each click runs the next appear. A ball of pixels wanders the field. Every few seconds it fires one trail of pixels. The trail lands at a random point inside the canvas and bursts into a random icon. A release on the field still drops one icon of its own: it may appear, slide, or expand. Reduced motion holds the mark finished, skips the wander, and drops no icons.
 - **Logo.** The word `pesty.sh` is a bitmap, crest on the ascenders and dim on the tails. The demo redraws that bitmap from a title, a face, and two hex colours. The page uses the background hex while the wasm file is still loading.
 
@@ -59,7 +59,7 @@ Open <http://127.0.0.1:43123>. You should see the word `pesty.sh` in pale pixels
 
 The page reloads when you save a TypeScript or CSS file. A Rust change is picked up the next time you start `npm run dev`, because that command builds the wasm before it serves.
 
-Move across the header. The cursor hoovers speckles from a wide radius and holds them. Leave and they fall back onto their own points. Hold on the field, then release, and an icon runs. Click the word, or tab to it and press Enter, and the next appear plays: print, drop, rise, bloom, spark, then print again. A ball of pixels wanders on its own. Every few seconds it fires one trail. That trail lands inside the canvas and bursts into a random icon.
+Move across the header. Speckles inside a wide radius slide toward the cursor, and slide back out as the cursor moves away. Hold on the field, then release, and an icon runs. Click the word, or tab to it and press Enter, and the next appear plays: print, drop, rise, bloom, spark, then print again. A ball of pixels wanders on its own. Every few seconds it fires one trail. That trail lands inside the canvas and bursts into a random icon.
 
 On this dev server the boxes under the sentence are live. Title is the string drawn in the field. Face is Pesty, Plex Mono, Georgia, or Impact. Tint and Background are hex colours. `#d6ee6a` and `#12140f` are the original tint and ground. `?demo=0` is the public page, with those boxes gone. A published site opens them with `?demo`. A shared link can carry the strings: `?demo&text=hello&face=georgia&tint=ff6040&bg=ffffff`. The page paints that background while the wasm file is still loading.
 
@@ -73,7 +73,7 @@ Picture settings live in `engine/src/config.rs`. Edit that file, run `npm run bu
 
 **Wander.** `DRIFT_FIRE` turns the trail on. The ball of pixels stays either way. `DRIFT_GAP_MIN_MS` and `DRIFT_GAP_MAX_MS` are the wait, five to eight seconds. `TRAIL_DOTS` and `TRAIL_SPREAD` shape the shot. `POP_EDGE` keeps the burst inside the canvas.
 
-**Noise.** `NOISE_WELL_CELLS` is how far the cursor hoovers, in letter-cells. `NOISE_WELL_PULL` is how hard it packs those speckles onto itself. `NOISE_WELL_MASS` is how bright the clump can get. The points keep their own places. `NOISE_DENSITY` is how many speckles the field keeps.
+**Noise.** `NOISE_WELL_CELLS` is how far a speckle will slide, in letter-cells. `NOISE_WELL_PULL` is how far it travels toward the cursor. `NOISE_WELL_MASS` is how bright the clump can get. The points keep their own places. `NOISE_DENSITY` is how many speckles the field keeps.
 
 **Pointer and icons.** `POINTER_FOLLOW` is how fast the glow catches the cursor. `CAST_RANDOM` rolls the icon and the play. `SLIDE_HOPS` and `SLIDE_SPIT` belong to a travelling click. `MAX_SPRITES` caps clicks and fired trails together.
 

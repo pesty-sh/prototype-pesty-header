@@ -11,7 +11,7 @@ Read `README.md` and get the page running before this file. This is the map for 
 3. Advance the appear clock. The shape of the fill, left to right or top to bottom or the others, is `appears.rs`. The length of the clock is `REVEAL_MS` in `motion.rs`.
 4. Collect glows: the pointer, and a slow drift when the mouse is away and motion is allowed.
 5. Collect icons. The one under a held pointer, then any that were released earlier and are still alive. A slide also contributes the smaller icons it has spat out. A release on the word is not in this list. It restarts the appear instead.
-6. For each square, decide. If it is a letter cell and the appear says it is visible, paint the overhead colour. Otherwise it is field: noise has to clear a threshold, helped by the glows and the icons. Inside a wide radius the pointer hoovers those speckles onto itself and the cells they left stay quiet. The noise points stay where they are. When the pointer moves off a point, that speckle is drawn on it again.
+6. For each square, decide. If it is a letter cell and the appear says it is visible, paint the overhead colour. Otherwise it is field: noise has to clear a threshold, helped by the glows and the icons. Inside a wide radius a speckle slides toward the pointer by how close the pointer is, and slides back out as the pointer moves away. The noise points stay where they are. The well only chooses which home a cell draws.
 
 Nothing else draws pixels. `lib.rs` calls `paint` once per frame. `src/main.ts` copies the buffer onto the canvas after that call.
 

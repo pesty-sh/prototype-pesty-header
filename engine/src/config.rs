@@ -134,8 +134,9 @@ pub const NOISE_DENSITY: f32 = 0.78;
 /// picked up. Speckles outside stay on their own point.
 pub const NOISE_WELL_CELLS: f32 = 20.0;
 /// How hard the well pulls. `0` leaves every point where it is.
-/// Higher packs the disk onto the cursor and leaves the rest of the
-/// radius empty. Kept under 1 so a point can fall back as the pointer leaves.
+/// Higher slides the disk farther toward the cursor. The slide follows
+/// distance, so a point travels back out as the cursor moves away.
+/// Kept under 1 so the rim of the radius stays on its own cell.
 pub const NOISE_WELL_PULL: f32 = 0.88;
 /// Cap on how much gathered noise can brighten the cursor. The points
 /// themselves are not moved. This only keeps the hoovered clump visible.

@@ -2,6 +2,12 @@
 
 All notable changes to the pesty.sh header. Dates are Europe/London.
 
+## 0.1.7 — 13 November 2026
+
+### Changed
+
+- Speckles slide toward the cursor by how close it is, and slide back out as the cursor moves away. Leaving the canvas is no longer the only in-and-out.
+
 ## 0.1.6 — 13 November 2026
 
 ### Changed

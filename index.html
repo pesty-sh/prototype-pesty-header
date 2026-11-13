@@ -83,13 +83,13 @@
         <div class="quiet" id="copy">
           <h1>Mouse, motion, and the wordmark.</h1>
           <p class="lede">
-            The letters are a bitmap in a Rust field. Move and the cursor hoovers nearby speckles,
-            then lets them fall back. Hold, and an icon charges. A ball of pixels wanders on its
+            The letters are a bitmap in a Rust field. Move and nearby speckles slide toward the
+            cursor, then back out as it moves away. Hold, and an icon charges. A ball of pixels wanders on its
             own and fires one trail every few seconds.
           </p>
           <ul class="hints">
-            <li><span>Move</span> hoovers speckles onto the cursor</li>
-            <li><span>Leave</span> and those speckles fall back</li>
+            <li><span>Move</span> slides speckles in toward the cursor</li>
+            <li><span>Move away</span> and those speckles slide back out</li>
             <li><span>Hold</span> charges an icon</li>
             <li><span>Release</span> lets that icon run</li>
             <li><span>The word</span> plays the next appear</li>
@@ -181,9 +181,9 @@
             <p class="idx">01</p>
             <h3>Pointer</h3>
             <p>
-              Where the cursor sits, and how long the press has been held. Inside a wide radius it
-              hoovers speckles onto itself and holds that clump. Move away and each speckle returns
-              to its own cell. The bar and the sentence are quiet rectangles, so the type stays put.
+              Where the cursor sits, and how long the press has been held. Inside a wide radius a
+              speckle slides toward the cursor as it approaches, and slides back out as the cursor
+              moves away. The bar and the sentence are quiet rectangles, so the type stays put.
             </p>
           </article>
           <article id="motion">
@@ -254,8 +254,8 @@ npm run dev</code></pre>
             for one command.
           </p>
           <p>
-            Move across the header. The cursor hoovers speckles from a wide radius and holds them.
-            Leave and they fall back onto their own points. Hold on the field, then release, and an
+            Move across the header. Speckles inside a wide radius slide toward the cursor, and
+            slide back out as the cursor moves away. Hold on the field, then release, and an
             icon runs. Click the word and the next appear plays: print, drop, rise, bloom, spark,
             then print again. A ball of pixels wanders on its own. Every few seconds it fires one
             trail. That trail lands inside the canvas and bursts into a random icon.
@@ -300,8 +300,8 @@ npm run dev</code></pre>
             <article>
               <h3>Noise</h3>
               <p>
-                <code>NOISE_WELL_CELLS</code> is how far the cursor hoovers, in letter-cells.
-                <code>NOISE_WELL_PULL</code> is how hard it packs those speckles onto itself.
+                <code>NOISE_WELL_CELLS</code> is how far a speckle will slide, in letter-cells.
+                <code>NOISE_WELL_PULL</code> is how far it travels toward the cursor.
                 <code>NOISE_WELL_MASS</code> is how bright the clump can get. The points keep their
                 own places. <code>NOISE_DENSITY</code> is how many speckles the field keeps.
               </p>

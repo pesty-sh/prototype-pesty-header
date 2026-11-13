@@ -10,11 +10,10 @@
 //!    stay the loudest thing. The top eases in so the bar is not a wall of cells.
 //! 5. `tier` picks dim, mid, or lit from how strong the glow is.
 //!
-//! A cursor inside the picture opens a wide well. Speckles in that radius
-//! are hoovered onto the pointer, and the cells they left stay quiet.
-//! Each speckle still belongs to its own cell. The well does not store a
-//! new point. When the pointer leaves that cell, the speckle is drawn
-//! there again.
+//! A cursor inside the picture opens a wide well. A speckle in that radius
+//! slides toward the pointer by how close the pointer is. Move the pointer
+//! away and the same speckle slides back out. The noise grid is not written.
+//! The well only chooses which home a cell draws.
 //!
 //! `NOISE_SCROLL_X`, `NOISE_SCROLL_Y`, `NOISE_DENSITY`, `NOISE_WELL_CELLS`,
 //! `NOISE_WELL_PULL`, `NOISE_WELL_MASS`, `VIGNETTE_RADIUS`, and
@@ -100,21 +99,21 @@ pub struct Well {
 
 /// Which noise point a cell should draw.
 ///
-/// `Own` is the cell itself. `Shifted` is a point from farther out in the
-/// well, drawn here because the cursor is holding it. `mass` keeps that
-/// clump visible. `Held` means this cell's point is in the clump, so the
-/// cell stays quiet until the cursor lets it go. The point's own cell is
-/// not given a new home.
+/// `Own` is the cell itself. `Shifted` draws a home farther from the cursor,
+/// so the speckle reads as if it has slid inward. `mass` keeps the packed
+/// clump visible. The home cell is not given a new place.
 #[derive(Clone, Copy, Debug)]
 pub enum Sample {
     Own,
     Shifted { col: f32, row: f32, mass: f32 },
-    Held,
 }
 
-/// The point that belongs on this cell, or the point the cursor is holding.
-/// The noise grid is not written. A later call with the cursor gone
-/// returns `Own` again.
+/// Where this cell should read noise from.
+///
+/// The shift is the distance to the cursor. A close cursor samples a home
+/// farther out along the same line, which draws that speckle inward. A
+/// cursor that has moved away samples a home near the cell, so the speckle
+/// is on its way back. The noise grid is not written.
 pub fn sample_at(col: i32, row: i32, well: Option<Well>) -> Sample {
     let Some(well) = well else {
         return Sample::Own;
@@ -126,30 +125,29 @@ pub fn sample_at(col: i32, row: i32, well: Option<Well>) -> Sample {
     let dx = col as f32 + 0.5 - well.col;
     let dy = row as f32 + 0.5 - well.row;
     let dist = (dx * dx + dy * dy).sqrt();
-    if dist >= well.radius {
+    if dist >= well.radius || dist < 0.04 {
         return Sample::Own;
     }
-    // The whole disk is packed into a small core on the cursor.
-    // Everything outside that core has been picked up.
-    let inner = (1.0 - pull).clamp(0.06, 1.0);
-    let v = dist / well.radius;
-    if v > inner {
-        return Sample::Held;
+    let across = dist / well.radius;
+    let home = home_fraction(across, pull);
+    let scale = home / across;
+    if scale < 1.02 {
+        return Sample::Own;
     }
-    let mass = (1.0 / inner).min(NOISE_WELL_MASS);
-    if dist < 0.04 {
-        return Sample::Shifted {
-            col: col as f32,
-            row: row as f32,
-            mass,
-        };
-    }
-    let scale = 1.0 / inner;
+    let slope = (1.0 - pull) + 2.0 * pull * home;
+    let mass = (1.0 / slope).clamp(1.0, NOISE_WELL_MASS);
     Sample::Shifted {
         col: well.col + dx * scale - 0.5,
         row: well.row + dy * scale - 0.5,
         mass,
     }
+}
+
+/// Display fraction `s` back to the home fraction. `s = (1-pull)*r + pull*r*r`.
+fn home_fraction(s: f32, pull: f32) -> f32 {
+    let disc = (1.0 - pull) * (1.0 - pull) + 4.0 * pull * s;
+    let r = ((pull - 1.0) + disc.sqrt()) / (2.0 * pull);
+    r.clamp(s, 1.0)
 }
 
 /// How much of this cell wants to be ink, before the Bayer test.
@@ -216,23 +214,36 @@ mod tests {
         (dx * dx + dy * dy).sqrt()
     }
 
+    fn inward(cell: i32, well: Well) -> f32 {
+        match sample_at(cell, 10, Some(well)) {
+            Sample::Own => 0.0,
+            Sample::Shifted { col, row, .. } => {
+                dist(col, row, well) - dist(cell as f32, 10.0, well)
+            }
+        }
+    }
+
     #[test]
-    fn a_well_hoovers_a_wide_disk_and_releases_it() {
+    fn a_well_slides_in_as_the_cursor_approaches_and_back_out_as_it_leaves() {
         let near = well_at(10.5, 10.5, 0.88);
         assert!(matches!(sample_at(10, 10, None), Sample::Own));
         assert!(matches!(sample_at(40, 10, Some(near)), Sample::Own));
-        assert!(matches!(sample_at(11, 10, Some(well_at(10.5, 10.5, 0.0))), Sample::Own));
+        assert!(matches!(sample_at(12, 10, Some(well_at(10.5, 10.5, 0.0))), Sample::Own));
 
-        let Sample::Shifted { col, row, mass } = sample_at(11, 10, Some(near)) else {
-            panic!("the core should hold the gathered points");
+        let Sample::Shifted { col, row, mass } = sample_at(12, 10, Some(near)) else {
+            panic!("a cell inside the radius should slide");
         };
-        let here = dist(11.0, 10.0, near);
+        let here = dist(12.0, 10.0, near);
         let home = dist(col, row, near);
         assert!(home > here + 1.0, "home {home} cell {here}");
         assert!(home <= near.radius + 0.05, "home left the well {home}");
         assert!(mass > 1.0);
 
-        assert!(matches!(sample_at(18, 10, Some(near)), Sample::Held));
+        let close = inward(18, near);
+        let farther = inward(18, well_at(2.5, 10.5, 0.88));
+        assert!(close > farther + 0.5, "close {close} farther {farther}");
+        assert!(farther > 0.2, "still inside the radius, still on the way back {farther}");
+
         let gone = well_at(80.5, 80.5, 0.88);
         assert!(matches!(sample_at(18, 10, Some(gone)), Sample::Own));
     }

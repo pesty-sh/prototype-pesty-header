@@ -19,8 +19,8 @@
 //!    overhead colour, lifted toward crest by a nearby glow. Every other cell
 //!    is the field. Noise has to clear a threshold, and the pointer, the
 //!    drift, and the icons are what push it up into mid and lit. Inside a
-//!    wide radius the pointer hoovers those speckles onto itself. The cells
-//!    they left stay quiet. They fall back once the pointer leaves.
+//!    wide radius the pointer slides those speckles toward itself. They
+//!    slide back out as the pointer moves away.
 //!
 //! Glow sizes are in `config.rs` (`QUIET_REACH_CELLS`, `POINTER_REACH_CELLS`,
 //! `DRIFT_GLOW`, and the rest of that group).
@@ -137,8 +137,10 @@ pub fn paint(engine: &mut Engine) {
         }
     }
 
-    // The well follows the pointer. Pull eases off with the glow, so a
-    // speckle falls back to its own cell as the pointer leaves it.
+    // The well follows the pointer. A speckle's slide is its distance to
+    // that point, so it travels in as the cursor approaches and back out
+    // as the cursor moves away. Strength only fades the pull once the
+    // pointer has left the picture.
     let well = if !reduced && engine.pointer.strength > 0.02 {
         Some(Well {
             col: (engine.pointer.x - mark.x) / cw,
@@ -257,12 +259,6 @@ fn cell_color(grid: &Grid, cell: &CellIn<'_>) -> Option<[u8; 4]> {
     let (ncol, nrow, mass) = match field::sample_at(cell.col, cell.row, cell.well) {
         field::Sample::Own => (cell.col as f32, cell.row as f32, 1.0),
         field::Sample::Shifted { col, row, mass } => (col, row, mass),
-        field::Sample::Held => {
-            if influence * 0.9 <= field::threshold(cell.col, cell.row) {
-                return None;
-            }
-            return Some(field::tier(influence, cell.tint));
-        }
     };
     let base = field::amount(cell.noise, ncol, nrow, cell.time_s, vig) * mass;
     if base + influence * 0.9 <= field::threshold(ncol.round() as i32, nrow.round() as i32) {

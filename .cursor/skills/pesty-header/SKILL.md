@@ -32,7 +32,7 @@ Edit in this order. The catalogs are `appears.rs` and `sprites.rs`.
 - Icons: `engine/src/sprites.rs`. 15×15, `#` and `.` only. `CAST` is `Random` or `First`. Plays are `Appear`, `Slide`, `Expand`. Slide spins across the header, spits smaller random icons, and bursts on each landing. A new play is a variant plus a branch in `Sprite::place`.
 - Pointer, quiet rects, charge: `engine/src/pointer.rs`
 - Appear clock (`REVEAL_MS`, 1100ms) and wander: `engine/src/motion.rs`
-- Noise, Bayer, vignette: `engine/src/field.rs`. A wide cursor well (`NOISE_WELL_CELLS`) hoovers speckles onto the pointer. They fall back when the pointer leaves. The noise points themselves are not moved.
+- Noise, Bayer, vignette: `engine/src/field.rs`. A wide cursor well (`NOISE_WELL_CELLS`) slides speckles toward the pointer by distance, and back out as the pointer moves away. The noise points themselves are not moved.
 - Frame, numbered in `paint`: `engine/src/paint.rs`
 - `Engine` and wasm exports: `engine/src/lib.rs` (exports are `cfg`'d to wasm32)
 - Canvas size and pointer events: `src/main.ts`
