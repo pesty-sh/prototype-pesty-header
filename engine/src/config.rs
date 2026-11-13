@@ -117,9 +117,9 @@ pub const QUIET_REACH_CELLS: f32 = 7.0;
 pub const POINTER_REACH_CELLS: f32 = 6.5;
 pub const POINTER_REACH_EXTRA: f32 = 8.0;
 /// The drift glow. It dims by `DRIFT_GLOW_DIM` while the pointer is strong.
-pub const DRIFT_GLOW: f32 = 0.24;
+pub const DRIFT_GLOW: f32 = 0.276;
 pub const DRIFT_GLOW_DIM: f32 = 0.7;
-pub const DRIFT_GLOW_REACH_CELLS: f32 = 8.0;
+pub const DRIFT_GLOW_REACH_CELLS: f32 = 12.0;
 
 // =============================================================================
 // Speckle
