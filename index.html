@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<!--
+  The page shell. The picture is not drawn here.
+
+  Process:
+  1. This file is the hero: a canvas, the word button, and the sentence.
+  2. src/main.ts measures the canvas and forwards the mouse.
+  3. The Rust engine paints the pixels. src/engine.ts copies them onto #field.
+
+  The word button is an empty hit target. The letters are pixels, not HTML text.
+  The form #live is the demo (title, face, tint, background). The script removes
+  it on the public page, and when the address has ?demo=0.
+
+  #nav, #eyebrow, and #copy are quiet boxes. The field does not paint through them.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#12140f" />
+    <title>pesty.sh</title>
+    <meta
+      name="description"
+      content="A Rust pixel field, compiled to Wasm, drawing the pesty.sh wordmark. Pointer, motion, and the logo share one buffer."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip" href="#engine">Skip to the engine scope</a>
+    <header class="hero" id="home">
+      <canvas id="field" class="field" aria-hidden="true"></canvas>
+      <nav class="nav" id="nav" aria-label="Header">
+        <a class="brand" href="#home">pesty.sh</a>
+        <div class="nav-links">
+          <a href="#pointer">Pointer</a>
+          <a href="#motion">Motion</a>
+          <a href="#logo">Logo</a>
+        </div>
+        <p class="status">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status">booting</span>
+        </p>
+      </nav>
+      <div class="stage">
+        <p class="eyebrow" id="eyebrow">Rust · Wasm · Cells</p>
+        <div class="mark-slot" id="mark-slot">
+          <button class="mark" id="mark" type="button">
+            <span class="sr-only">Play the next pesty.sh appear</span>
+          </button>
+        </div>
+        <div class="quiet" id="copy">
+          <h1>Mouse, motion, and the wordmark.</h1>
+          <p class="lede">
+            The letters are a bitmap in a Rust field. Move and the nearest cells take the light.
+            Hold, and an icon charges. Release, and it appears, slides, or expands.
+            Click the word and the next appear plays.
+          </p>
+          <ul class="hints">
+            <li><span>Move</span> wakes the nearest cells</li>
+            <li><span>Hold</span> charges an icon</li>
+            <li><span>Release</span> lets that icon run</li>
+            <li><span>The word</span> plays the next appear</li>
+          </ul>
+          <form id="live" class="live" autocomplete="off" hidden>
+            <label class="live-field">
+              <span>Title</span>
+              <input
+                id="title"
+                name="title"
+                maxlength="24"
+                spellcheck="false"
+                autocapitalize="off"
+                value="pesty.sh"
+                aria-label="Title drawn in the field"
+              />
+            </label>
+            <label class="live-field">
+              <span>Face</span>
+              <select id="face" name="face" aria-label="Face for the title">
+                <option value="pesty">Pesty</option>
+                <option value="plex">Plex Mono</option>
+                <option value="georgia">Georgia</option>
+                <option value="impact">Impact</option>
+              </select>
+            </label>
+            <label class="live-field">
+              <span>Tint</span>
+              <input
+                id="tint"
+                name="tint"
+                maxlength="32"
+                spellcheck="false"
+                autocapitalize="off"
+                autocorrect="off"
+                value="#d6ee6a"
+                aria-label="Text tint hex"
+              />
+            </label>
+            <label class="live-field">
+              <span>Background</span>
+              <input
+                id="bg"
+                name="bg"
+                maxlength="32"
+                spellcheck="false"
+                autocapitalize="off"
+                autocorrect="off"
+                value="#12140f"
+                aria-label="Background hex"
+              />
+            </label>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main id="engine">
+      <div class="wrap">
+        <div class="engine-head">
+          <p class="eyebrow">Scope</p>
+          <h2>Three jobs, one buffer.</h2>
+          <p class="lede">
+            Pointer, motion, and the logo share a single RGBA buffer. This header is that buffer.
+          </p>
+        </div>
+        <dl class="meter" aria-hidden="true">
+          <div>
+            <dt>Pointer</dt>
+            <dd id="m-pointer">away</dd>
+          </div>
+          <div>
+            <dt>Appear</dt>
+            <dd id="m-print">booting</dd>
+          </div>
+          <div>
+            <dt>Icons</dt>
+            <dd id="m-stamps">0</dd>
+          </div>
+          <div>
+            <dt>Cell</dt>
+            <dd id="m-cell">—</dd>
+          </div>
+        </dl>
+        <div class="scope">
+          <article id="pointer">
+            <p class="idx">01</p>
+            <h3>Pointer</h3>
+            <p>
+              Where the cursor sits, how long the press has been held, and whether it landed on the
+              letters. The bar and the sentence are quiet rectangles, so the type stays put.
+            </p>
+          </article>
+          <article id="motion">
+            <p class="idx">02</p>
+            <h3>Motion</h3>
+            <p>
+              The mark prints from the left on the first load. Each click runs the next appear.
+              A release drops one icon. It may appear in place, slide away, or expand until it
+              fades. Reduced motion holds the mark finished and the field still.
+            </p>
+          </article>
+          <article id="logo">
+            <p class="idx">03</p>
+            <h3>Logo</h3>
+            <p>
+              The word is a bitmap, crest on the ascenders and dim on the tails. The demo
+              redraws that bitmap from a title, a face, and two hex colours.
+            </p>
+          </article>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <p>pesty.sh · MIT</p>
+    </footer>
+    <noscript>pesty.sh draws its wordmark with WebAssembly. This browser has JavaScript turned off.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

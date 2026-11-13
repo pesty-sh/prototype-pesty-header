@@ -1,0 +1,18 @@
+[package]
+name = "pesty-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Pixel field for the pesty.sh header: pointer, motion, and the wordmark."
+license = "MIT"
+publish = false
+
+[lib]
+name = "pesty_engine"
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
