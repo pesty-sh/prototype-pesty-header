@@ -132,7 +132,7 @@ pub const NOISE_SCROLL_Y: f32 = 0.055;
 pub const NOISE_DENSITY: f32 = 0.78;
 /// Radius of the cursor well, in letter-cells. Speckles inside are
 /// picked up. Speckles outside stay on their own point.
-pub const NOISE_WELL_CELLS: f32 = 11.5;
+pub const NOISE_WELL_CELLS: f32 = 13.8;
 /// How hard the well pulls. `0` leaves every point where it is.
 /// Higher slides the disk farther toward the cursor. The slide follows
 /// distance, so a point travels back out as the cursor moves away.
