@@ -36,7 +36,7 @@ The reading order starts at `paint.rs`, then follows the calls. This list is dif
 
 ## The Rust is the source
 
-`engine/src/*.rs`, `engine/src/mark.txt`, and `engine/mark.py` are the project. `public/engine.wasm` is the release build of that crate. It is gitignored. Rebuild it. Do not edit it, and do not try to recover source from it.
+`engine/src/*.rs`, `engine/src/mark.txt`, and `engine/mark.py` are the project. `public/engine.wasm` is the release build of that crate. The demo host commits that file so it can publish without Rust. Rebuild it when the Rust changes, and commit the new file. Do not edit it, and do not try to recover source from it.
 
 ```bash
 npm run build:wasm

@@ -2,7 +2,6 @@ node_modules/
 dist/
 target/
 engine/target/
-public/engine.wasm
 .pesty/
 agent-tools/
 .DS_Store

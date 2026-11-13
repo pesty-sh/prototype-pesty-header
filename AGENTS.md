@@ -4,7 +4,7 @@ This repo is the pesty.sh pixel header. The engine does three jobs: pointer, mot
 
 ## Source of truth
 
-Edit `engine/src/*.rs`. The wasm is built from those files. It was not decompiled from `public/engine.wasm`, and that file is gitignored. Do not hand-edit the wasm, do not commit it, and do not try to recover Rust from it.
+Edit `engine/src/*.rs`. The wasm is built from those files. It was not decompiled from `public/engine.wasm`. That file is the release build the demo host ships, so a publish does not install Rust. Do not hand-edit the wasm, and do not try to recover Rust from it. After a Rust change, rebuild it and commit the new `public/engine.wasm` with that change.
 
 After a Rust change:
 

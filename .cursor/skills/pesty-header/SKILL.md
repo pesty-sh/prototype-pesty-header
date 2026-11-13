@@ -11,7 +11,7 @@ Read `README.md` for the first-timer path, then `AGENTS.md` and `docs/engine.md`
 
 ## Source
 
-The `.rs` files are the source. `public/engine.wasm` is the release build and is gitignored. Do not edit the wasm, commit it, or decompile it back into Rust.
+The `.rs` files are the source. `public/engine.wasm` is the release build. The demo host commits it so a publish does not install Rust. Do not edit the wasm or decompile it back into Rust. After a Rust change, rebuild it and commit the new file.
 
 ```bash
 cargo test --manifest-path engine/Cargo.toml
@@ -37,7 +37,7 @@ Edit in this order. The catalogs are `appears.rs` and `sprites.rs`.
 - `Engine` and wasm exports: `engine/src/lib.rs` (exports are `cfg`'d to wasm32)
 - Canvas size and pointer events: `src/main.ts`
 - Wasm instantiate and blit: `src/engine.ts`
-- Public `dist/`: `docs/release.md`. `npm test` then `npm run build`. Do not commit `dist/` or `public/engine.wasm`.
+- Public `dist/`: `docs/release.md`. `npm test` then `npm run build` on a machine with Rust. The demo host runs `vite build` only, because `public/engine.wasm` is committed. Do not commit `dist/`.
 
 The bitmap test expects 80×21 and 465 ink pixels. Change the assertion when the ink count changes. `mark.py` overwrites `mark.txt`.
 

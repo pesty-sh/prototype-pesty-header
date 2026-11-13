@@ -2,21 +2,19 @@
 
 A web page with a pixel header. The letters, the mouse glow, and the little icons are drawn by a Rust program that runs in the browser.
 
-You edit the Rust and the TypeScript. A command turns the Rust into a file named `engine.wasm`. The page loads that file and copies each finished picture onto a canvas. Do not edit `engine.wasm`. It is generated, and it is not committed.
+You edit the Rust and the TypeScript. A command turns the Rust into a file named `engine.wasm`. The page loads that file and copies each finished picture onto a canvas. Do not edit `engine.wasm`. The demo host ships the copy in `public/`. Rebuild that file when the Rust changes.
 
-If you only want the page running, follow [First run](#first-run) and stop there. If you need to change the picture, follow [Read the code](#read-the-code) after the page is up.
+If you only want the page running, follow [Install](#install) and [Getting started](#getting-started) and stop there. If you need to change the picture, the knobs are in [Config](#config). The file map is [Read the code](#read-the-code).
 
 ## What the picture is doing
 
-Three jobs, and only these three:
+Three jobs, and only these three. Pointer, motion, and the logo share one RGBA buffer.
 
-- **Pointer.** Where the mouse is, how long a press has been held, and whether it landed on the letters.
-- **Motion.** How the letters fill in, and a slow drift in the background when the mouse is away.
-- **Logo.** The word `pesty.sh`, lit from bright at the top of the letters to dark at the tails.
+- **Pointer.** Where the cursor sits, and how long a press has been held. Inside a wide radius it hoovers speckles onto itself and holds that clump. Move away and each speckle returns to its own cell. The bar and the sentence are quiet rectangles, so the type stays put.
+- **Motion.** The mark prints from the left on the first load. Each click runs the next appear. A ball of pixels wanders the field. Every few seconds it fires one trail of pixels. The trail lands at a random point inside the canvas and bursts into a random icon. A release on the field still drops one icon of its own: it may appear, slide, or expand. Reduced motion holds the mark finished, skips the wander, and drops no icons.
+- **Logo.** The word `pesty.sh` is a bitmap, crest on the ascenders and dim on the tails. The demo redraws that bitmap from a title, a face, and two hex colours. The page uses the background hex while the wasm file is still loading.
 
-The speckled background is not a fourth system. It is the ground those three jobs sit on. Most squares stay the background colour. The mouse, the drift, and a released icon are what light a square up.
-
-Icons do not enter the screen on their own. Press on the speckled field and an icon charges under the pointer. Release, and that icon appears, slides, or expands. A slide spins across the header, drops smaller icons as it moves, and bursts each time it lands. Press on the word and the next letter animation plays instead. No icon is dropped.
+The speckled ground is not a fourth job. The cursor can hoover it, and the wander can fire into it. Most squares stay the background colour. The mouse, the drift, and a released icon are what light a square up.
 
 ## Words this repo uses
 
@@ -30,27 +28,22 @@ Icons do not enter the screen on their own. Press on the speckled field and an i
 | Demo | The page with the title, face, and hex boxes. The dev server is demo. A published site is demo only at `?demo`. |
 | Production | The public page. No title box, no face menu, no hex boxes. The word is the hand-drawn `pesty.sh`. |
 
-## Install, once
+## Install
 
-You need Node and Rust. In a terminal:
+Node 20 or newer, and Rust with the browser target. Once per machine.
 
 ```bash
 node --version
 npm --version
 rustc --version
-```
-
-Node should be 20 or newer. If `node` or `npm` is missing, install Node from <https://nodejs.org> and open a new terminal. If `rustc` is missing, install Rust from <https://rustup.rs> and open a new terminal.
-
-Rust needs one extra target, the one the browser build uses. Once per machine:
-
-```bash
 rustup target add wasm32-unknown-unknown
 ```
 
-## First run
+If `node` or `npm` is missing, install Node from <https://nodejs.org> and open a new terminal. If `rustc` is missing, install Rust from <https://rustup.rs> and open a new terminal. The `wasm32-unknown-unknown` target is what the page build uses.
 
-From this folder:
+## Getting started
+
+From this folder. Leave the last command running, then open the page.
 
 ```bash
 npm install
@@ -58,63 +51,51 @@ npm test
 npm run dev
 ```
 
-What those do:
-
-1. `npm install` downloads the JavaScript packages into `node_modules/`. That folder is not committed.
-2. `npm test` runs the Rust tests, builds `public/engine.wasm`, and asks that file a few questions. The last line should contain `pesty engine ok`.
+1. `npm install` downloads the JavaScript packages. `node_modules/` is not committed.
+2. `npm test` runs the Rust tests, builds `public/engine.wasm`, and checks that file. The last line should contain `pesty engine ok`.
 3. `npm run dev` builds the wasm again and serves the page.
 
-Leave that terminal open. Open <http://127.0.0.1:43123>.
-
-You should see the word `pesty.sh` in pale green pixels, a dark speckled field, and the word `live` at the top right. The port is always **43123** unless you set `PESTY_PORT` for one command.
+Open <http://127.0.0.1:43123>. You should see the word `pesty.sh` in pale pixels, a speckled field, and `live` at the top right. The port stays **43123** unless you set `PESTY_PORT` for one command.
 
 The page reloads when you save a TypeScript or CSS file. A Rust change is picked up the next time you start `npm run dev`, because that command builds the wasm before it serves.
 
-## Use the page
+Move across the header. The cursor hoovers speckles from a wide radius and holds them. Leave and they fall back onto their own points. Hold on the field, then release, and an icon runs. Click the word, or tab to it and press Enter, and the next appear plays: print, drop, rise, bloom, spark, then print again. A ball of pixels wanders on its own. Every few seconds it fires one trail. That trail lands inside the canvas and bursts into a random icon.
 
-- Move across the header. Nearby squares and the letters brighten.
-- Hold on the speckled field, then release. An icon runs.
-- Click the word, or tab to it and press Enter. The next appear plays. The order is print, drop, rise, bloom, spark, then print again.
-- On this dev server the boxes under the sentence are live. Title is the string drawn in the field. Face is Pesty, Plex Mono, Georgia, or Impact. Tint and Background are hex colours such as `#ff0000` or `ff0000`. Six digits update the picture. `#d6ee6a` and `#12140f` are the original tint and ground.
-- Add `?demo=0` to the address to see the public page, with those boxes gone.
-- A published site hides the boxes until the address has `?demo`. A link can carry the strings: `?demo&text=hello&face=georgia&tint=ff6040&bg=101820`.
+On this dev server the boxes under the sentence are live. Title is the string drawn in the field. Face is Pesty, Plex Mono, Georgia, or Impact. Tint and Background are hex colours. `#d6ee6a` and `#12140f` are the original tint and ground. `?demo=0` is the public page, with those boxes gone. A published site opens them with `?demo`. A shared link can carry the strings: `?demo&text=hello&face=georgia&tint=ff6040&bg=ffffff`. The page paints that background while the wasm file is still loading.
 
-If the browser is set to reduced motion, the letters are already finished, the field does not drift, and a release drops no icon. The mouse still lights the squares under it.
+If the browser asks for reduced motion, the letters are already finished, the wander does not fire, and a release drops no icon. The pointer still lights the cells under it.
 
-## Stop the server
+Press Ctrl+C once in the dev terminal and wait until it prints `Port 43123 is free.` A second Ctrl+C force-stops it, then checks the port again. If that terminal is already gone, `npm run stop` frees a Vite process, or `scripts/dev.mjs`, whose working directory is this folder. A different program on 43123 is left running. Do not kill a pid you do not recognise.
 
-In the terminal where `npm run dev` is running, press Ctrl+C once. Wait until it prints:
+## Config
 
-```text
-Port 43123 is free.
-```
+Picture settings live in `engine/src/config.rs`. Edit that file, run `npm run build:wasm`, and reload. The page does not read the file on its own.
 
-The next `npm run dev` uses 43123 again. A second Ctrl+C force-stops it, then checks the port again.
+**Wander.** `DRIFT_FIRE` turns the trail on. The ball of pixels stays either way. `DRIFT_GAP_MIN_MS` and `DRIFT_GAP_MAX_MS` are the wait, five to eight seconds. `TRAIL_DOTS` and `TRAIL_SPREAD` shape the shot. `POP_EDGE` keeps the burst inside the canvas.
 
-If that terminal is already gone:
+**Noise.** `NOISE_WELL_CELLS` is how far the cursor hoovers, in letter-cells. `NOISE_WELL_PULL` is how hard it packs those speckles onto itself. `NOISE_WELL_MASS` is how bright the clump can get. The points keep their own places. `NOISE_DENSITY` is how many speckles the field keeps.
 
-```bash
-npm run stop
-```
+**Pointer and icons.** `POINTER_FOLLOW` is how fast the glow catches the cursor. `CAST_RANDOM` rolls the icon and the play. `SLIDE_HOPS` and `SLIDE_SPIT` belong to a travelling click. `MAX_SPRITES` caps clicks and fired trails together.
 
-That stops a Vite process, or `scripts/dev.mjs`, whose working directory is this folder. A different program already listening on 43123 is left running, and the command prints its pid. Do not kill a pid you do not recognise.
+**Page.** How often the page draws, and the pixel-ratio cap, are `FRAME_MS` and `DPR_CAP` at the top of `src/main.ts`. Colours are the six values in `engine/src/palette.rs`, repeated as `--bg`, `--lit`, `--mid`, and `--crest` in `src/style.css`. Letter shapes stay in `engine/mark.py`.
 
 ## Read the code
 
 Read in this order. The comment at the top of each file is a short tutorial: the steps that file runs, then the settings you can change.
 
-1. `engine/src/paint.rs` — one picture, numbered in the order it is drawn. Start here.
-2. `engine/src/palette.rs` — the six colours. `src/style.css` repeats four of them for the page around the canvas.
-3. `engine/src/logo.rs` and `engine/src/mark.txt` — the letter grid. `#` is ink, `.` is empty.
-4. `engine/src/appears.rs` — what a click on the word does. The list is the `ORDER` array.
-5. `engine/src/sprites.rs` — the icons. A field release plays one. The sprite that moves on its own pops more. The knobs are in `engine/src/config.rs`.
-6. `engine/src/pointer.rs` — the mouse. A release on the word is a replay. A release on the field is a stamp.
-7. `engine/src/motion.rs` — how long an appear takes (`REVEAL_MS`, 1100ms) and the slow drift.
-8. `engine/src/field.rs` — the speckled ground.
-9. `engine/src/lib.rs` — the `Engine` that calls the files above, then the functions the browser calls.
-10. `src/engine.ts` — loads the wasm and copies the pixels onto the canvas.
-11. `src/main.ts` — the page. It measures the canvas, forwards the mouse, and in demo mode reads the four boxes.
-12. `src/title.ts` — turns the title string into cells. Pesty uses `src/glyphs.json`. The other faces are drawn by the browser and read back.
+1. `engine/src/config.rs` — every knob: the wander and its trail, the hoover, the pointer, the icons.
+2. `engine/src/paint.rs` — one picture, numbered in the order it is drawn.
+3. `engine/src/palette.rs` — the six colours. `src/style.css` repeats four of them for the page around the canvas.
+4. `engine/src/logo.rs` and `engine/src/mark.txt` — the letter grid. `#` is ink, `.` is empty.
+5. `engine/src/appears.rs` — what a click on the word does. The list is the `ORDER` array.
+6. `engine/src/sprites.rs` — the icons. A field release plays one. The wander fires a trail that bursts into another.
+7. `engine/src/pointer.rs` — the mouse. A release on the word is a replay. A release on the field is a stamp.
+8. `engine/src/motion.rs` — how long an appear takes (`REVEAL_MS`, 1100ms) and the path of the pixel ball.
+9. `engine/src/field.rs` — the speckled ground, and the well that hoovers it.
+10. `engine/src/lib.rs` — the `Engine` that calls the files above, then the functions the browser calls.
+11. `src/engine.ts` — loads the wasm and copies the pixels onto the canvas.
+12. `src/main.ts` — the page. It measures the canvas, forwards the mouse, fills the ground before the first frame, and in demo mode reads the four boxes.
+13. `src/title.ts` — turns the title string into cells. Pesty uses `src/glyphs.json`. The other faces are drawn by the browser and read back.
 
 `docs/engine.md` is the same map with the steps for adding an appear or an icon. `docs/release.md` is how to publish. `AGENTS.md` is the short note for an editor who already knows the layout.
 
@@ -130,12 +111,16 @@ That rewrites `engine/src/mark.txt` and `src/glyphs.json`. Then run the tests. `
 
 ## Publish
 
+On a machine with Rust:
+
 ```bash
 npm test
 npm run build
 ```
 
 Upload the contents of `dist/`. The rest, including how to preview that folder on port 43123, is in `docs/release.md`.
+
+The demo host does not install Rust. `public/engine.wasm` is already in the repo, and Vite copies it into `dist/`. On Vercel leave the preset as Vite, set the install command to `npm install`, the build command to `vite build`, and the output directory to `dist`. `vercel.json` sets those three. Do not put a rustup command in the install step. `npm run build` compiles the wasm first, so the host does not use it.
 
 ## If something fails
 
@@ -148,15 +133,16 @@ Upload the contents of `dist/`. The rest, including how to preview that folder o
 ## Layout
 
 ```
+engine/src/config.rs    every knob: wander, hoover, pointer, icons
 engine/src/palette.rs   the six colours
 engine/src/logo.rs      the letter grid and the light bands
 engine/src/mark.txt     the baked pesty.sh bitmap
 engine/mark.py          edit the hand-drawn letters here
 engine/src/appears.rs   click sequence
-engine/src/sprites.rs   icons, fired only by a field release
+engine/src/sprites.rs   icons, and the trail that bursts
 engine/src/pointer.rs   mouse
-engine/src/motion.rs    appear length, drift
-engine/src/field.rs     speckled ground
+engine/src/motion.rs    appear length, and the pixel ball
+engine/src/field.rs     speckled ground, and the hoover
 engine/src/paint.rs     one picture, top to bottom
 engine/src/lib.rs       Engine, and the functions the page calls
 src/main.ts             the page

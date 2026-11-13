@@ -17,7 +17,25 @@ npm run build
 
 Upload the contents of `dist/`. Do not upload `node_modules`, `engine/target`, or a wasm you edited by hand. The Rust in `engine/src` is the source. The build compiles it.
 
-`dist/` is gitignored. Generate it on the machine that publishes.
+`dist/` is gitignored. Generate it on the machine that publishes. `public/engine.wasm` is committed so a host without Rust can still publish.
+
+## Demo host
+
+The demo site does not install Rust. Vite copies `public/engine.wasm` into `dist/`.
+
+On Vercel, import the repo as Vite:
+
+| Setting | Value |
+| --- | --- |
+| Framework | Vite |
+| Root Directory | `./` |
+| Install Command | `npm install` |
+| Build Command | `vite build` |
+| Output Directory | `dist` |
+
+No environment variables. `vercel.json` sets the install command, the build command, and the output directory. If the project settings still show a rustup install, replace that command with `npm install` and set the build command to `vite build`.
+
+`npm run build` compiles the wasm before Vite runs, so a host without Rust cannot use it.
 
 ## Look at the build
 
