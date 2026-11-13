@@ -7,7 +7,7 @@
   "scripts": {
     "build:wasm": "cargo build --release --manifest-path engine/Cargo.toml --target wasm32-unknown-unknown && mkdir -p public && cp engine/target/wasm32-unknown-unknown/release/pesty_engine.wasm public/engine.wasm",
     "dev": "node scripts/dev.mjs",
-    "build": "npm run build:wasm && vite build",
+    "build": "vite build",
     "preview": "node scripts/dev.mjs preview",
     "stop": "node scripts/stop.mjs",
     "test": "cargo test --manifest-path engine/Cargo.toml && npm run build:wasm && node scripts/smoke.mjs"

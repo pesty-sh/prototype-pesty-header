@@ -13,29 +13,17 @@ npm test
 npm run build
 ```
 
-`npm test` runs the Rust tests, builds `public/engine.wasm`, and checks that module. `npm run build` builds the wasm again and writes the site to `dist/`.
+`npm test` runs the Rust tests, builds `public/engine.wasm`, and checks that module. `npm run build` only bundles the page. It does not compile Rust. Vite copies the wasm that is already in `public/`.
 
-Upload the contents of `dist/`. Do not upload `node_modules`, `engine/target`, or a wasm you edited by hand. The Rust in `engine/src` is the source. The build compiles it.
+Upload the contents of `dist/`. Do not upload `node_modules`, `engine/target`, or a wasm you edited by hand. The Rust in `engine/src` is the source. `npm run build:wasm` compiles it.
 
 `dist/` is gitignored. Generate it on the machine that publishes. `public/engine.wasm` is committed so a host without Rust can still publish.
 
 ## Demo host
 
-The demo site does not install Rust. Vite copies `public/engine.wasm` into `dist/`.
+Vercel is a static demo. It installs npm packages and bundles the page. The wasm is already in the repo. Nothing on the host compiles Rust.
 
-On Vercel, import the repo as Vite:
-
-| Setting | Value |
-| --- | --- |
-| Framework | Vite |
-| Root Directory | `./` |
-| Install Command | `npm install` |
-| Build Command | `vite build` |
-| Output Directory | `dist` |
-
-No environment variables. `vercel.json` sets the install command, the build command, and the output directory. If the project settings still show a rustup install, replace that command with `npm install` and set the build command to `vite build`.
-
-`npm run build` compiles the wasm before Vite runs, so a host without Rust cannot use it.
+Leave the Vite defaults. `vercel.json` sets them: install `npm install`, build `vite build`, output `dist`. No environment variables. If the project settings still show a rustup command, turn that override off and redeploy.
 
 ## Look at the build
 

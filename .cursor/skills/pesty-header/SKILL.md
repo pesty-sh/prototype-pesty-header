@@ -37,7 +37,7 @@ Edit in this order. The catalogs are `appears.rs` and `sprites.rs`.
 - `Engine` and wasm exports: `engine/src/lib.rs` (exports are `cfg`'d to wasm32)
 - Canvas size and pointer events: `src/main.ts`
 - Wasm instantiate and blit: `src/engine.ts`
-- Public `dist/`: `docs/release.md`. `npm test` then `npm run build` on a machine with Rust. The demo host runs `vite build` only, because `public/engine.wasm` is committed. Do not commit `dist/`.
+- Public `dist/`: `docs/release.md`. `npm test` then `npm run build`. `npm run build` only bundles the page. The demo host is static: `public/engine.wasm` is committed, and Vercel runs `vite build`. Do not commit `dist/`.
 
 The bitmap test expects 80×21 and 465 ink pixels. Change the assertion when the ink count changes. `mark.py` overwrites `mark.txt`.
 

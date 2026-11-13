@@ -120,7 +120,7 @@ npm run build
 
 Upload the contents of `dist/`. The rest, including how to preview that folder on port 43123, is in `docs/release.md`.
 
-The demo host does not install Rust. `public/engine.wasm` is already in the repo, and Vite copies it into `dist/`. On Vercel leave the preset as Vite, set the install command to `npm install`, the build command to `vite build`, and the output directory to `dist`. `vercel.json` sets those three. Do not put a rustup command in the install step. `npm run build` compiles the wasm first, so the host does not use it.
+Vercel is a static demo. The wasm is already in the repo, and `npm run build` only bundles the page. Leave the Vite defaults. `vercel.json` sets install to `npm install`, build to `vite build`, and output to `dist`. If the project settings still show a rustup command, turn that override off and redeploy.
 
 ## If something fails
 
